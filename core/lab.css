@@ -83,13 +83,17 @@ sub, sup { font-size: .72em; }
 .bench { display: grid; gap: 14px; min-width: 0; }
 .inst { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
 @media (max-width: 1060px) {
-  /* one column: what you act on, what you watch, what you're asked, then the knobs */
+  /* one column: circuit, the screen, the knobs that change it right underneath,
+     then the question, then the scope's own tools */
   .lab { grid-template-columns: minmax(0, 1fr); }
-  .bench { display: contents; }
+  .bench, .scope-card { display: contents; }
   .circuit-card { order: 1; }
-  .scope-card { order: 2; }
-  .mission { order: 3; }
-  .controls { order: 4; }
+  #scope { order: 2; }
+  .controls { order: 3; }
+  .mission { order: 4; }
+  .scope-tools { order: 5; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; min-width: 0; }
+  .scope-tools .scope-bar { margin-top: 0; }
+  .controls .params { margin-top: 10px; }
 }
 
 /* ── circuit ── */
