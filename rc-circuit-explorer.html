@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RC circuit explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F2F5F8; --grid:rgba(36,72,120,.07); --panel:#FFFFFF; --ink:#14233A; --muted:#58697F;
+  --line:#C9D3DE; --wire:#26374F; --vc:#2A5BD7; --vr:#0E8A7C; --cur:#C47400; --heat:#E4572E;
+  --electron:#7B4FD0; --soft:#E7EDF4; --focus:#2A5BD7;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1621; --grid:rgba(150,185,230,.06); --panel:#152131; --ink:#E4ECF6; --muted:#93A4BA;
+    --line:#2A3B51; --wire:#B7C6D9; --vc:#79A2FF; --vr:#3FC6B4; --cur:#F2AA3B; --heat:#FF7A4D;
+    --electron:#B596FF; --soft:#1C2B3E; --focus:#79A2FF; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1621; --grid:rgba(150,185,230,.06); --panel:#152131; --ink:#E4ECF6; --muted:#93A4BA;
+  --line:#2A3B51; --wire:#B7C6D9; --vc:#79A2FF; --vr:#3FC6B4; --cur:#F2AA3B; --heat:#FF7A4D;
+  --electron:#B596FF; --soft:#1C2B3E; --focus:#79A2FF; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px; line-height:1.55;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;flex-wrap:wrap;gap:18px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+h1{font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0 0 6px;letter-spacing:-.01em}
+.lede{margin:0;color:var(--muted);max-width:58ch}
+.levels{display:flex;flex-direction:column;gap:6px}
+.levels > span{font-size:14px;color:var(--muted)}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{
+  font:inherit;font-size:15px;border:0;background:transparent;color:var(--ink);padding:7px 13px;border-radius:7px;cursor:pointer;
+}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel);font-weight:700}
+.seg button:hover:not([aria-pressed="true"]){background:var(--soft)}
+button:focus-visible,input:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.bench{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.bench{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel h2{font-size:18px;margin:0 0 4px}
+.sub{font-size:14px;color:var(--muted);margin:0 0 10px}
+
+#circuit{width:100%;height:auto;display:block;touch-action:manipulation}
+#circuit .wire{stroke:var(--wire);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#circuit .lbl{fill:var(--ink);font-size:14px;font-family:"Atkinson Hyperlegible",sans-serif}
+#circuit .val{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600}
+#circuit .node{fill:var(--wire)}
+#circuit .contact{fill:var(--panel);stroke:var(--wire);stroke-width:2}
+#blade{transform-box:view-box;transform-origin:250px 70px;transition:transform .18s ease}
+#switchHit{cursor:pointer}
+#switchHit:hover + g .hint, #switchHit:focus + g .hint{opacity:1}
+.hint{opacity:.55;transition:opacity .2s}
+@media (prefers-reduced-motion:reduce){#blade{transition:none}}
+
+.narr{min-height:3.2em;margin:8px 2px 12px;font-size:16px;border-left:3px solid var(--vc);padding:2px 0 2px 12px}
+
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
+.btn{font:inherit;font-size:15px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--ink);color:var(--panel);border-color:var(--ink);font-weight:700;min-width:84px}
+
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-top:12px}
+@media (max-width:520px){.sliders{grid-template-columns:1fr}}
+.sl label{display:flex;justify-content:space-between;font-size:15px;gap:8px}
+.sl output{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--ink);margin:4px 0 0}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--ink)}
+
+.scopebox{position:relative}
+#scope{width:100%;height:320px;display:block;border-radius:10px;background:var(--paper)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+.legend button{font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:20px;padding:4px 12px 4px 9px;cursor:pointer}
+.legend button[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.legend i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.cap{font-size:13.5px;color:var(--muted);margin:2px 0 0}
+
+.meters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px}
+.meter{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper)}
+.meter .k{font-size:13px;color:var(--muted);display:block}
+.meter .v{font-family:"JetBrains Mono",monospace;font-size:17px;font-weight:600;display:block;white-space:nowrap}
+.meter.sw{border-left:4px solid var(--c,var(--line))}
+
+.learn{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;margin-top:18px}
+@media (max-width:900px){.learn{grid-template-columns:1fr}}
+.learn h2{font-size:22px;margin:0 0 10px}
+.learn h3{font-size:17px;margin:20px 0 6px}
+.learn p,.learn li{max-width:72ch}
+.learn ul{padding-left:1.2em}
+.eq{font-family:"JetBrains Mono",monospace;font-size:15px;background:var(--soft);border-radius:8px;padding:10px 12px;margin:10px 0;overflow-x:auto;white-space:nowrap;line-height:1.8}
+.eq sub,.eq sup{font-size:.75em}
+.try{border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin:14px 0}
+.try strong{display:block;margin-bottom:2px}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:0 0 10px;background:var(--panel)}
+summary{cursor:pointer;font-weight:700}
+details p{margin:10px 0 2px}
+footer{margin-top:28px;font-size:14px;color:var(--muted)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>The RC circuit, live</h1>
+    <p class="lede">A battery, a resistor, a capacitor and a switch. Flip the switch, change R and C, and watch charge pile up on the plates while the scope records every volt and milliamp.</p>
+  </div>
+  <div class="levels">
+    <span id="levelLbl">Explain it for</span>
+    <div class="seg" role="group" aria-labelledby="levelLbl" id="levelSeg">
+      <button data-level="c10">Class 10</button>
+      <button data-level="c12">Class 12</button>
+      <button data-level="eng">Engineering</button>
+      <button data-level="pro">M.Tech &amp; professional</button>
+    </div>
+  </div>
+</header>
+
+<section class="bench">
+  <div class="panel">
+    <h2>Circuit</h2>
+    <p class="sub">Click the switch to move it between A (charge) and B (discharge).</p>
+    <svg id="circuit" viewBox="0 0 560 350" role="img" aria-label="RC circuit with battery, two-way switch, resistor and capacitor">
+      <defs>
+        <filter id="glow" x="-30%" y="-200%" width="160%" height="500%"><feGaussianBlur stdDeviation="4"/></filter>
+      </defs>
+      <!-- wires -->
+      <path class="wire" d="M80 172 L80 70 L189 70"/>
+      <path class="wire" d="M250 70 L300 70"/>
+      <path class="wire" d="M400 70 L480 70 L480 176"/>
+      <path class="wire" d="M480 192 L480 310 L80 310 L80 188"/>
+      <path class="wire" d="M205 112 L205 310"/>
+      <circle class="node" cx="205" cy="310" r="4"/>
+      <!-- battery -->
+      <line x1="58" y1="172" x2="102" y2="172" stroke="var(--wire)" stroke-width="3"/>
+      <line x1="69" y1="188" x2="91" y2="188" stroke="var(--wire)" stroke-width="6"/>
+      <text class="lbl" x="108" y="170" font-size="13">+</text>
+      <text class="lbl" x="18" y="160">Battery</text>
+      <text class="val" x="18" y="200" fill="var(--ink)" id="tV">9.0 V</text>
+      <!-- resistor + heat glow -->
+      <path id="heat" d="M300 70 L308 58 L324 82 L340 58 L356 82 L372 58 L388 82 L396 70 L400 70" fill="none" stroke="var(--heat)" stroke-width="9" stroke-linejoin="round" filter="url(#glow)" opacity="0"/>
+      <path class="wire" d="M300 70 L308 58 L324 82 L340 58 L356 82 L372 58 L388 82 L396 70 L400 70"/>
+      <text class="lbl" x="318" y="42">R = <tspan id="tR" class="val">10 kΩ</tspan></text>
+      <text class="val" x="316" y="108" fill="var(--vr)" id="tVR">V_R = 0.00 V</text>
+      <!-- capacitor -->
+      <rect id="capFill" x="455" y="177" width="50" height="14" fill="var(--vc)" opacity="0"/>
+      <line x1="452" y1="176" x2="508" y2="176" stroke="var(--wire)" stroke-width="3.5"/>
+      <line x1="452" y1="192" x2="508" y2="192" stroke="var(--wire)" stroke-width="3.5"/>
+      <g id="plus"></g><g id="minus"></g>
+      <text class="lbl" x="400" y="140">C = <tspan id="tC" class="val">100 µF</tspan></text>
+      <text class="val" x="398" y="240" fill="var(--vc)" id="tVC">V_C = 0.00 V</text>
+      <!-- switch -->
+      <circle class="contact" cx="189" cy="70" r="5"/>
+      <circle class="contact" cx="205" cy="112" r="5"/>
+      <text class="lbl" x="164" y="56">A</text>
+      <text class="lbl" x="183" y="134">B</text>
+      <rect id="switchHit" x="170" y="40" width="100" height="90" fill="transparent" tabindex="0" role="button" aria-label="Toggle switch between charge and discharge"/>
+      <g pointer-events="none">
+        <line id="blade" x1="250" y1="70" x2="189" y2="70" stroke="var(--wire)" stroke-width="4" stroke-linecap="round"/>
+        <circle class="node" cx="250" cy="70" r="5"/>
+        <text class="lbl hint" x="226" y="160" font-size="12" fill="var(--muted)">switch</text>
+      </g>
+      <!-- current dots -->
+      <path id="pA" d="M80 172 L80 70 L189 70 L250 70 L480 70 L480 176 M480 192 L480 310 L80 310 L80 188" fill="none" stroke="none"/>
+      <path id="pB" d="M480 176 L480 70 L250 70 L205 112 L205 310 L480 310 L480 192" fill="none" stroke="none"/>
+      <g id="dotsA"></g><g id="dotsB"></g>
+      <text id="dotKey" x="18" y="340" font-size="12.5" fill="var(--muted)" font-family="Atkinson Hyperlegible,sans-serif">Moving dots show conventional current (+ to −)</text>
+    </svg>
+
+    <p class="narr" id="narr"></p>
+
+    <div class="row">
+      <div class="seg" role="group" aria-label="Experiment mode" id="modeSeg">
+        <button data-mode="charge">Charge</button>
+        <button data-mode="discharge">Discharge</button>
+        <button data-mode="square" id="sqBtn">Square wave</button>
+      </div>
+      <button class="btn primary" id="play">Pause</button>
+      <button class="btn" id="reset">Reset</button>
+    </div>
+
+    <div class="sliders">
+      <div class="sl"><label for="sV">Battery voltage <output id="oV"></output></label><input type="range" id="sV" min="1" max="24" step="0.5" value="9"></div>
+      <div class="sl"><label for="sR">Resistance <output id="oR"></output></label><input type="range" id="sR" min="0" max="1000" value="500"></div>
+      <div class="sl"><label for="sC">Capacitance <output id="oC"></output></label><input type="range" id="sC" min="0" max="1000" value="800"></div>
+      <div class="sl"><label for="sS">Playback, seconds per τ <output id="oS"></output></label><input type="range" id="sS" min="0" max="100" value="50"></div>
+      <div class="sl" id="kWrap"><label for="sK">Square wave period <output id="oK"></output></label><input type="range" id="sK" min="0.5" max="20" step="0.5" value="6"></div>
+      <label class="chk"><input type="checkbox" id="elec"> Show electrons instead of current</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Scope</h2>
+    <p class="sub">Voltages on the left axis, current on the right. Vertical lines mark each time constant τ.</p>
+    <div class="scopebox"><canvas id="scope" aria-label="Live graph of capacitor voltage, resistor voltage and current against time"></canvas></div>
+    <div class="legend" id="legend">
+      <button data-s="vc" aria-pressed="true"><i style="background:var(--vc)"></i>V<sub>C</sub> capacitor</button>
+      <button data-s="vr" aria-pressed="true"><i style="background:var(--vr)"></i>V<sub>R</sub> resistor</button>
+      <button data-s="i" aria-pressed="true"><i style="background:var(--cur)"></i>I current</button>
+    </div>
+    <p class="cap mono" id="scopeCap"></p>
+    <div class="meters" id="meters"></div>
+  </div>
+</section>
+
+<section class="learn">
+  <div class="panel" id="explain"></div>
+  <div>
+    <div class="panel">
+      <h2>Check yourself</h2>
+      <p class="sub">Predict first, then test it on the circuit, then open the answer.</p>
+      <div id="quiz"></div>
+    </div>
+  </div>
+</section>
+
+<footer>The simulation solves the circuit exactly at every step, so the curves are the true exponentials, not approximations. Energy figures reset with the Reset button.</footer>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const NS="http://www.w3.org/2000/svg";
+
+/* ---------- formatting ---------- */
+function fmt(x,unit,d=3){
+  if(!isFinite(x)) return "–";
+  if(x===0) return "0 "+unit;
+  const a=Math.abs(x);
+  const P=[[1e6,"M"],[1e3,"k"],[1,""],[1e-3,"m"],[1e-6,"µ"],[1e-9,"n"],[1e-12,"p"]];
+  for(const [m,p] of P){ if(a>=m*0.9995){ const v=x/m; return (+v.toPrecision(d)).toString()+" "+p+unit; } }
+  return (+(x/1e-12).toPrecision(d))+" p"+unit;
+}
+const sig2=x=>{const e=Math.pow(10,Math.floor(Math.log10(x))-1);return Math.round(x/e)*e};
+
+/* ---------- state ---------- */
+const S={level:"c12",mode:"charge",running:true,V:9,R:1e4,C:1e-4,spt:1,k:6,
+  vc:0,t:0,tEv:0,v0:0,sw:"A",i:0,hist:[],eSrc:0,eR:0,lastPush:-1,electrons:false};
+const show={vc:true,vr:true,i:true};
+const tau=()=>S.R*S.C;
+try{const L=localStorage.getItem("rc-level"); if(L) S.level=L;}catch(e){}
+
+function newEvent(){S.tEv=S.t;S.v0=S.vc;}
+
+/* ---------- physics: exact exponential update ---------- */
+function step(h){
+  let sw;
+  if(S.mode==="charge") sw="A";
+  else if(S.mode==="discharge") sw="B";
+  else{const T=S.k*tau();const ph=((S.t-S.tEv)%T+T)%T;sw=ph<T/2?"A":"B";}
+  const Vs=sw==="A"?S.V:0;
+  const vn=Vs+(S.vc-Vs)*Math.exp(-h/tau());
+  const dq=S.C*(vn-S.vc);
+  const eIn=sw==="A"?S.V*dq:0;
+  S.eSrc+=eIn;
+  S.eR+=eIn-0.5*S.C*(vn*vn-S.vc*S.vc);
+  S.vc=vn;S.t+=h;S.sw=sw;S.i=(Vs-vn)/S.R;
+  if(S.t-S.lastPush>=tau()/120){S.hist.push([S.t,S.vc,S.i]);S.lastPush=S.t;}
+}
+function windowW(){return S.mode==="square"?Math.max(8*tau(),2.5*S.k*tau()):8*tau();}
+function advance(dt){
+  const simDt=dt/S.spt*tau();
+  let hmax=tau()/40; if(S.mode==="square") hmax=Math.min(hmax,S.k*tau()/40);
+  const n=Math.min(400,Math.ceil(simDt/hmax));
+  for(let j=0;j<n;j++) step(simDt/n);
+  const W=windowW(); let cut=0;
+  while(cut<S.hist.length && S.hist[cut][0]<S.t-W*1.2) cut++;
+  if(cut) S.hist.splice(0,cut);
+}
+
+/* ---------- circuit drawing ---------- */
+const pA=$("#pA"),pB=$("#pB");
+const LA=pA.getTotalLength(),LB=pB.getTotalLength();
+function makeDots(g,L){const arr=[];const n=Math.floor(L/30);for(let j=0;j<n;j++){const c=document.createElementNS(NS,"circle");c.setAttribute("r","4");g.appendChild(c);arr.push(c);}return arr;}
+const dA=makeDots($("#dotsA"),LA),dB=makeDots($("#dotsB"),LB);
+let offA=0,offB=0;
+const plusG=$("#plus"),minusG=$("#minus");const plusT=[],minusT=[];
+for(let j=0;j<6;j++){
+  const p=document.createElementNS(NS,"text");p.setAttribute("x",457+j*9);p.setAttribute("y",171);p.setAttribute("font-size","13");p.setAttribute("font-weight","700");p.setAttribute("fill","var(--vc)");p.textContent="+";plusG.appendChild(p);plusT.push(p);
+  const m=document.createElementNS(NS,"text");m.setAttribute("x",458+j*9);m.setAttribute("y",207);m.setAttribute("font-size","14");m.setAttribute("font-weight","700");m.setAttribute("fill","var(--vc)");m.textContent="−";minusG.appendChild(m);minusT.push(m);
+}
+function placeDots(dots,path,L,off){
+  const n=dots.length,sp=L/n;
+  for(let j=0;j<n;j++){let s=((off+j*sp)%L+L)%L;const pt=path.getPointAtLength(s);dots[j].setAttribute("cx",pt.x.toFixed(1));dots[j].setAttribute("cy",pt.y.toFixed(1));}
+}
+function drawCircuit(dt){
+  const Imax=S.V/S.R, frac=Math.min(1,Math.abs(S.i)/Imax);
+  const onA=S.sw==="A";
+  $("#blade").style.transform=onA?"rotate(0deg)":"rotate(-43deg)";
+  $("#dotsA").style.display=onA?"":"none";$("#dotsB").style.display=onA?"none":"";
+  const color=S.electrons?"var(--electron)":"var(--cur)";
+  $("#dotsA").setAttribute("fill",color);$("#dotsB").setAttribute("fill",color);
+  let dir=onA?Math.sign(S.i):Math.sign(-S.i); if(S.electrons) dir=-dir;
+  if(S.running){const v=130*frac*dir*dt; if(onA) offA+=v; else offB+=v;}
+  if(onA) placeDots(dA,pA,LA,offA); else placeDots(dB,pB,LB,offB);
+  const op=frac<0.004?0.25:0.95; $("#dotsA").setAttribute("opacity",op);$("#dotsB").setAttribute("opacity",op);
+  const q=Math.max(0,S.vc/S.V)*6;
+  for(let j=0;j<6;j++){const o=Math.max(0,Math.min(1,q-j));plusT[j].setAttribute("opacity",o);minusT[j].setAttribute("opacity",o);}
+  $("#capFill").setAttribute("opacity",(0.35*Math.max(0,S.vc/S.V)).toFixed(3));
+  $("#heat").setAttribute("opacity",(0.9*frac*frac).toFixed(3));
+  $("#tVR").textContent="V_R = "+(S.i*S.R).toFixed(2)+" V";
+  $("#tVC").textContent="V_C = "+S.vc.toFixed(2)+" V";
+}
+
+/* ---------- scope ---------- */
+const cv=$("#scope"),ctx=cv.getContext("2d");
+function fitCanvas(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);}
+new ResizeObserver(fitCanvas).observe(cv);
+function drawScope(){
+  const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
+  const w=cv.clientWidth,h=cv.clientHeight; if(!w) return;
+  ctx.clearRect(0,0,w,h);
+  const pl=58,pr=62,pt=16,pb=30;
+  const W=windowW(),t0=Math.max(0,S.t-W);
+  const neg=S.mode!=="charge"||S.hist.some(p=>p[2]<0);
+  const vmax=S.V*1.08,vmin=neg?-S.V*1.08:0;
+  const X=t=>pl+(t-t0)/W*(w-pl-pr), Y=v=>pt+(vmax-v)/(vmax-vmin)*(h-pt-pb);
+  ctx.font='12px "JetBrains Mono",monospace';ctx.lineWidth=1;
+  // horizontal grid + axes labels
+  const steps=neg?[-1,-.5,0,.5,1]:[0,.25,.5,.75,1];
+  for(const f of steps){const v=f*S.V,y=Y(v);
+    ctx.strokeStyle=col("--line");ctx.globalAlpha=f===0?1:.6;ctx.beginPath();ctx.moveTo(pl,y);ctx.lineTo(w-pr,y);ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle=col("--muted");ctx.textAlign="right";ctx.fillText(fmt(v,"V",2),pl-6,y+4);
+    if(show.i){ctx.fillStyle=col("--cur");ctx.textAlign="left";ctx.fillText(fmt(v/S.R,"A",2),w-pr+6,y+4);}
+  }
+  // tau grid
+  const base=S.mode==="square"?0:S.tEv, T=tau();
+  const n0=Math.ceil((t0-base)/T),n1=Math.floor((t0+W-base)/T);
+  ctx.textAlign="center";
+  for(let n=n0;n<=n1;n++){const x=X(base+n*T);
+    ctx.strokeStyle=col("--line");ctx.setLineDash(n===0&&S.mode!=="square"?[]:[3,4]);ctx.beginPath();ctx.moveTo(x,pt);ctx.lineTo(x,h-pb);ctx.stroke();ctx.setLineDash([]);
+    if(n>=0){ctx.fillStyle=col("--muted");ctx.fillText(n+"τ",x,h-pb+17);}
+  }
+  // 1-tau target line
+  if(S.mode!=="square"&&S.tEv>=t0-1e-12){
+    const Vs=S.mode==="charge"?S.V:0,target=Vs+(S.v0-Vs)*Math.exp(-1);
+    if(Math.abs(S.v0-Vs)>S.V*0.02){
+      const y=Y(target),x1=X(S.tEv+T);
+      ctx.strokeStyle=col("--vc");ctx.globalAlpha=.55;ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(X(S.tEv),y);ctx.lineTo(w-pr,y);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+      ctx.fillStyle=col("--vc");ctx.textAlign="left";ctx.fillText("63.2% of the way at 1τ",Math.min(x1+8,w-pr-170),y-6);
+      if(S.t>=S.tEv+T){ctx.beginPath();ctx.arc(x1,y,4,0,7);ctx.fill();}
+    }
+  }
+  // series
+  const series=[["vc",p=>p[1],"--vc"],["vr",p=>p[2]*S.R,"--vr"],["i",p=>p[2]*S.R,"--cur"]];
+  ctx.save();ctx.beginPath();ctx.rect(pl,pt-4,w-pl-pr,h-pt-pb+8);ctx.clip();
+  for(const [k,f,c] of series){ if(!show[k]||S.hist.length<2) continue;
+    ctx.strokeStyle=col(c);ctx.lineWidth=k==="i"?2:2.6;ctx.setLineDash(k==="i"?[1,0]:[]);
+    if(k==="i"){ctx.setLineDash([7,4]);}
+    ctx.beginPath();let first=true;
+    for(const p of S.hist){if(p[0]<t0-W*.02)continue;const x=X(p[0]),y=Y(f(p));if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);}
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.restore();
+  // playhead
+  const xh=X(S.t);ctx.strokeStyle=col("--ink");ctx.globalAlpha=.35;ctx.beginPath();ctx.moveTo(xh,pt);ctx.lineTo(xh,h-pb);ctx.stroke();ctx.globalAlpha=1;
+  if(show.vc){ctx.fillStyle=col("--vc");ctx.beginPath();ctx.arc(xh,Y(S.vc),4.5,0,7);ctx.fill();}
+  if(show.vr){ctx.fillStyle=col("--vr");ctx.beginPath();ctx.arc(xh,Y(S.i*S.R),4.5,0,7);ctx.fill();}
+  // axis titles
+  ctx.fillStyle=col("--muted");ctx.textAlign="left";ctx.fillText("volts",4,pt+2);
+  if(show.i){ctx.textAlign="right";ctx.fillStyle=col("--cur");ctx.fillText("amps",w-2,pt+2);}
+  $("#scopeCap").textContent="1τ = RC = "+fmt(T,"s")+"   ·   window shows "+(W/T).toFixed(W/T%1?1:0)+"τ = "+fmt(W,"s")+"   ·   t = "+fmt(S.t,"s");
+}
+
+/* ---------- level content ---------- */
+const METERS=[
+  {k:"Capacitor voltage V_C",f:()=>fmt(S.vc,"V"),c:"--vc",lv:["c10","c12","eng","pro"]},
+  {k:"Resistor voltage V_R",f:()=>fmt(S.i*S.R,"V"),c:"--vr",lv:["c10","c12","eng","pro"]},
+  {k:"Current I",f:()=>fmt(S.i,"A"),c:"--cur",lv:["c10","c12","eng","pro"]},
+  {k:"Charged",f:()=>Math.round(100*Math.max(0,S.vc)/S.V)+" %",lv:["c10"]},
+  {k:"Time constant τ",f:()=>fmt(tau(),"s"),lv:["c10","c12","eng","pro"]},
+  {k:"Time since switch",f:()=>S.mode==="square"?"–":((S.t-S.tEv)/tau()).toFixed(2)+" τ",lv:["c12","eng","pro"]},
+  {k:"Charge Q = C·V_C",f:()=>fmt(S.C*S.vc,"C"),lv:["c12","eng","pro"]},
+  {k:"Stored ½CV_C²",f:()=>fmt(0.5*S.C*S.vc*S.vc,"J"),lv:["c12","eng","pro"]},
+  {k:"Power heating R",f:()=>fmt(S.i*S.i*S.R,"W"),lv:["eng","pro"]},
+  {k:"Energy from battery",f:()=>fmt(S.eSrc,"J"),lv:["eng","pro"]},
+  {k:"Energy burnt in R",f:()=>fmt(S.eR,"J"),lv:["eng","pro"]},
+  {k:"Stored ÷ supplied",f:()=>S.eSrc>1e-15?Math.round(100*0.5*S.C*S.vc*S.vc/S.eSrc)+" %":"–",lv:["eng"]},
+  {k:"Corner f_c = 1/2πRC",f:()=>fmt(1/(2*Math.PI*tau()),"Hz"),lv:["pro"]},
+  {k:"Rise time 10–90 %",f:()=>fmt(Math.log(9)*tau(),"s"),lv:["pro"]},
+];
+let meterEls=[];
+function buildMeters(){
+  const box=$("#meters");box.innerHTML="";meterEls=[];
+  for(const m of METERS){if(!m.lv.includes(S.level))continue;
+    const d=document.createElement("div");d.className="meter"+(m.c?" sw":"");if(m.c)d.style.setProperty("--c","var("+m.c+")");
+    d.innerHTML='<span class="k"></span><span class="v"></span>';d.querySelector(".k").textContent=m.k;box.appendChild(d);meterEls.push([m,d.querySelector(".v")]);}
+}
+function updateMeters(){for(const [m,el] of meterEls) el.textContent=m.f();}
+
+const EXPLAIN={
+c10:`<h2>Think of it as filling a water tank</h2>
+<p>The battery is a pump. Wires are pipes. The resistor is a narrow bit of pipe that slows the flow. The capacitor is a tank split down the middle by a stretchy rubber sheet: water cannot pass through, but pushing water in on one side pushes the same amount out of the other side.</p>
+<h3>What you see when the switch goes to A</h3>
+<ul>
+<li>At first the tank is empty and offers no push-back, so current rushes in. The dots move fast and the resistor glows.</li>
+<li>As charge piles up (+ on the top plate, − on the bottom), the capacitor pushes back harder. Current slows down.</li>
+<li>When the capacitor's voltage equals the battery's voltage, there is nothing left to push current. It stops. A charged capacitor blocks steady current.</li>
+</ul>
+<h3>Voltages always add up</h3>
+<div class="eq">V<sub>battery</sub> = V<sub>R</sub> + V<sub>C</sub> &nbsp;&nbsp;&nbsp; and &nbsp;&nbsp;&nbsp; V<sub>R</sub> = I × R</div>
+<p>Watch the two curves on the scope: as V<sub>C</sub> goes up, V<sub>R</sub> goes down by exactly the same amount.</p>
+<h3>How fast? The time constant</h3>
+<p>A bigger resistor slows the flow. A bigger capacitor is a bigger tank. Together they set the circuit's own clock, called τ (tau):</p>
+<div class="eq">τ = R × C &nbsp;&nbsp;(ohms × farads = seconds)</div>
+<p>After one τ the capacitor is about two-thirds full. After five τ it is practically full.</p>
+<div class="try"><strong>Try this</strong>Set R to 10 kΩ and C to 100 µF. That makes τ = 1 second. Now double R and watch the whole curve stretch to twice as long.</div>`,
+
+c12:`<h2>Charging and discharging an RC circuit</h2>
+<p>With the switch at A, Kirchhoff's voltage law says V = IR + q/C at every instant. Solving it gives the curves on the scope:</p>
+<div class="eq">Charging: &nbsp;V<sub>C</sub>(t) = V (1 − e<sup>−t/RC</sup>) &nbsp;&nbsp; I(t) = (V/R) e<sup>−t/RC</sup> &nbsp;&nbsp; q = C·V<sub>C</sub></div>
+<div class="eq">Discharging: V<sub>C</sub>(t) = V<sub>0</sub> e<sup>−t/RC</sup> &nbsp;&nbsp; I(t) = −(V<sub>0</sub>/R) e<sup>−t/RC</sup></div>
+<h3>What τ = RC really means</h3>
+<ul>
+<li>At t = τ, the capacitor has covered 1 − e<sup>−1</sup> ≈ 63.2 % of the gap to its final value. The dashed line on the scope marks this.</li>
+<li>Every further τ the remaining gap shrinks to 36.8 % of what it was: 86.5 % at 2τ, 95 % at 3τ, 99.3 % at 5τ.</li>
+<li>The curve never "finishes" mathematically, but after 5τ it is done for all practical purposes.</li>
+</ul>
+<h3>Two limits worth remembering</h3>
+<p>At the instant the switch closes, an uncharged capacitor acts like a plain wire, so the current is simply V/R. Long after, it acts like a break in the wire and the current is zero. The initial current does not depend on C at all.</p>
+<h3>Energy</h3>
+<div class="eq">U = ½ C V<sub>C</sub><sup>2</sup> = ½ Q V<sub>C</sub> = Q<sup>2</sup> / 2C</div>
+<p>During discharge the negative sign of I and V<sub>R</sub> just means current now flows the other way round the loop. Switch on "show electrons" to see that electrons always move opposite to the conventional current.</p>
+<div class="try"><strong>Try this</strong>Keep R fixed and change C. The starting current (right axis) stays the same, only the decay stretches. Then keep C fixed and change R: the starting current changes too.</div>`,
+
+eng:`<h2>First-order dynamics from first principles</h2>
+<p>KVL around the loop with i = C dv<sub>C</sub>/dt gives a first-order linear ODE:</p>
+<div class="eq">RC · dv<sub>C</sub>/dt + v<sub>C</sub> = v<sub>s</sub>(t)</div>
+<p>For any step input the solution has one universal form, which is worth memorising because it works for every first-order RC or RL circuit:</p>
+<div class="eq">x(t) = x(∞) + [x(0⁺) − x(∞)] · e<sup>−t/τ</sup>, &nbsp;&nbsp; τ = R<sub>Th</sub> C</div>
+<p>Here R<sub>Th</sub> is the Thevenin resistance seen by the capacitor with the sources zeroed. Find the initial value, the final value and τ, and you have the whole waveform without solving any differential equation.</p>
+<h3>The 50 % energy result</h3>
+<p>Charging from zero to V, the battery delivers QV = CV². The capacitor keeps ½CV². The other ½CV² is always turned into heat in the resistor, whatever the value of R. A smaller R only makes the loss happen faster at higher power. Charge fully in the simulator and watch the "stored ÷ supplied" meter settle at 50 %.</p>
+<h3>Square-wave drive</h3>
+<ul>
+<li>Period much longer than τ: the capacitor voltage follows the input with rounded edges. Across R you see sharp spikes at each edge, so the resistor voltage is roughly the derivative of the input (a differentiator).</li>
+<li>Period much shorter than τ: the capacitor never gets far, so V<sub>C</sub> is a small triangle wave riding on V/2. It behaves like an integrator, and the output is the input's average.</li>
+</ul>
+<div class="try"><strong>Try this</strong>Choose Square wave and slide the period from 20τ down to 0.5τ. You are watching a low-pass filter move from "passes the signal" to "averages it away".</div>
+<h3>Practical notes</h3>
+<p>Electrolytic capacitors are often ±20 %, so timing circuits built on RC alone are only as accurate as the part. For DC hold-up or debounce, design with the 5τ rule and a tolerance margin.</p>`,
+
+pro:`<h2>Transfer function, settling and non-idealities</h2>
+<p>Taking v<sub>C</sub> as output, the circuit is a single-pole low-pass system:</p>
+<div class="eq">H(s) = V<sub>C</sub>(s)/V<sub>s</sub>(s) = 1 / (1 + sτ), &nbsp;&nbsp; pole at s = −1/τ, &nbsp;&nbsp; f<sub>c</sub> = 1 / (2πRC)</div>
+<div class="eq">h(t) = (1/τ) e<sup>−t/τ</sup> u(t) &nbsp;&nbsp;&nbsp; step: 1 − e<sup>−t/τ</sup> &nbsp;&nbsp;&nbsp; t<sub>r</sub>(10–90 %) = τ ln 9 ≈ 2.2τ ≈ 0.35 / f<sub>c</sub></div>
+<h3>Settling time to a given accuracy</h3>
+<div class="eq">t<sub>s</sub> = τ · ln(1/ε) &nbsp;&nbsp; ε = 0.1 % → 6.9τ &nbsp;&nbsp; ε = ½ LSB of N bits → τ · (N+1) ln 2</div>
+<p>This is the sizing rule behind SAR ADC sample-and-hold inputs, where source impedance plus switch resistance charging the sampling capacitor must settle within the acquisition window.</p>
+<h3>Where real parts depart from this model</h3>
+<ul>
+<li><strong>ESR</strong> puts a resistor in series with the plates. The terminal voltage jumps by i·ESR at each edge, visible as a step on top of the exponential.</li>
+<li><strong>Leakage</strong> R<sub>L</sub> in parallel with C lowers the final value to V·R<sub>L</sub>/(R+R<sub>L</sub>) and shortens τ to (R ∥ R<sub>L</sub>)·C.</li>
+<li><strong>Dielectric absorption</strong> makes a "discharged" capacitor recover part of its voltage after the short is removed, an extra slow pole the simple model ignores.</li>
+<li><strong>Voltage coefficient</strong> in class-2 ceramics (X7R, X5R) makes C drop with bias, so τ is not constant across the transient.</li>
+</ul>
+<h3>About this simulator</h3>
+<p>Each step uses the exact exponential update v<sub>n+1</sub> = v<sub>s</sub> + (v<sub>n</sub> − v<sub>s</sub>)·e<sup>−h/τ</sup>, which is unconditionally stable and exact for piecewise-constant input. Forward Euler on the same ODE is unstable for h &gt; 2τ, which is why stiff circuit simulators use implicit or exponential integrators.</p>
+<div class="try"><strong>Try this</strong>In Square wave mode set the period to about 6τ, so the drive frequency is roughly f<sub>c</sub>/1. Compare the ripple amplitude with |H(jω)| at the fundamental.</div>`
+};
+
+const QUIZ={
+c10:[["The capacitor is fully charged. What is the current in the circuit?","Zero. V_C now equals the battery voltage, so there is no voltage left across the resistor, and I = V_R / R = 0."],
+     ["You double the resistance. Does charging take longer or shorter?","Twice as long. τ = R × C, so doubling R doubles τ. The starting current also halves, because I = V / R at the first instant."],
+     ["Is any current flowing through the gap between the capacitor plates?","No charge crosses the gap. Charge piles up on one plate and an equal amount leaves the other, so the wires on both sides carry the same current while it is charging."]],
+c12:[["V = 10 V, R = 10 kΩ, C = 100 µF, capacitor starts empty. What is V_C after 1 s?","τ = 10⁴ × 10⁻⁴ = 1 s, so t = τ and V_C = 10(1 − e⁻¹) ≈ 6.32 V. Set these values and check the dashed line."],
+     ["Same circuit. What is the current the instant the switch closes? Does it change if C is doubled?","I₀ = V/R = 10 V / 10 kΩ = 1 mA. Doubling C does not change it, only the decay becomes twice as slow."],
+     ["After how many time constants does a discharging capacitor fall below 1 % of its starting voltage?","e^(−t/τ) = 0.01 gives t = τ ln 100 ≈ 4.6τ."]],
+eng:[["A 12 V source charges 470 µF from zero through 1 kΩ. How much energy ends up as heat in the resistor?","½CV² = 0.5 × 470 µF × 144 = 33.8 mJ, the same as the energy stored. Changing R to 10 Ω would not change this figure."],
+     ["Square-wave drive between 0 and V with period T = τ/5. Describe V_C in steady state.","A small triangle-like ripple centred on V/2. Each half-period moves V_C by only about (V/2)(T/2τ) = V/20, so peak-to-peak ripple is roughly 0.05V."],
+     ["A capacitor is charged to 5 V, then the switch moves to a 9 V source through R. Write v_C(t).","v_C(t) = 9 + (5 − 9)e^(−t/RC) = 9 − 4e^(−t/RC). Initial, final, τ, done."]],
+pro:[["A 12-bit ADC's sampling capacitor must settle to within ½ LSB. How many τ of acquisition time are needed?","ε = 2⁻¹³, so t = τ ln(2¹³) = 13 ln 2 · τ ≈ 9.0τ."],
+     ["R = 100 kΩ charges C from V, and C has 1 MΩ leakage. Final V_C and effective τ?","Final value V × 1M/1.1M ≈ 0.909V. Effective τ = (100k ∥ 1M)·C ≈ 90.9 kΩ · C."],
+     ["What is the 3 dB bandwidth of R = 1 kΩ, C = 10 nF, and its 10–90 % rise time?","f_c = 1/(2π · 10 µs) ≈ 15.9 kHz. t_r = 2.2 × 10 µs ≈ 22 µs, consistent with 0.35/f_c."]]
+};
+
+function narrate(){
+  const T=tau(), n=(S.t-S.tEv)/T, L=S.level;
+  let s;
+  if(S.mode==="square"){
+    const hi=S.sw==="A";
+    s = L==="c10" ? (hi?"The switch keeps flipping. Right now it is at A, so the capacitor is filling up.":"The switch keeps flipping. Right now it is at B, so the capacitor is emptying through the resistor.")
+      : L==="c12" ? `The input alternates between ${S.V} V and 0 V every ${ (S.k/2).toFixed(1)}τ. The capacitor ${hi?"charges towards "+S.V+" V":"discharges towards 0 V"} but may not get there before the next flip.`
+      : L==="eng" ? `Period = ${S.k}τ. ${S.k>=8?"Long period: V_C nearly completes each transient, and V_R shows differentiator spikes.":S.k<=2?"Short period: V_C barely moves around V/2, the circuit is averaging (integrating) the input.":"Middle ground: each half-cycle ends partway through the exponential."}`
+      : `Drive at f = ${fmt(1/(S.k*T),"Hz")}, i.e. f/f_c = ${(2*Math.PI/S.k).toFixed(2)}. Fundamental gain |H| = ${(1/Math.sqrt(1+Math.pow(2*Math.PI/S.k,2))).toFixed(2)}.`;
+    return s;
+  }
+  const charging=S.mode==="charge";
+  const Vs=charging?S.V:0, gap0=Vs-S.v0, p=Math.abs(gap0)<1e-9?1:(S.vc-S.v0)/gap0;
+  const pc=Math.round(100*Math.max(0,Math.min(1,p)));
+  if(L==="c10"){
+    if(charging) s = p<0.03?"Switch at A. The capacitor is empty, so current rushes in fast.": p<0.95?`The capacitor is ${Math.round(100*S.vc/S.V)} % full. It pushes back more and more, so the current keeps slowing down.`:"Full. The capacitor's voltage matches the battery, so current has stopped.";
+    else s = p<0.03?"Switch at B. The battery is out of the loop and the capacitor now pushes current backwards through the resistor.": p<0.95?`Emptying: ${Math.round(100*S.vc/S.V)} % of the charge is left. Less charge means less push, so the current fades.`:"Empty. No charge left, no current.";
+  } else if(L==="c12"){
+    s = `t = ${n.toFixed(2)}τ. V_C has covered ${pc} % of the way ${charging?"up to "+S.V+" V":"down to 0 V"}. `+(n<1?"At 1τ it will reach 63.2 %.":n<5?`Remaining gap: e^(−${n.toFixed(2)}) = ${(100*Math.exp(-n)).toFixed(1)} %.`:"Beyond 5τ: practically finished.");
+  } else if(L==="eng"){
+    s = `t = ${n.toFixed(2)}τ. i = (V_s − v_C)/R = ${fmt(S.i,"A")}, P_R = ${fmt(S.i*S.i*S.R,"W")}. `+(charging?`Battery has supplied ${fmt(S.eSrc,"J")} in total, ${fmt(S.eR,"J")} of it lost as heat.`:`All of the stored energy is being turned into heat in R.`);
+  } else {
+    const rem=Math.abs(S.vc-Vs)/Math.max(1e-12,Math.abs(gap0));
+    s = `t = ${n.toFixed(2)}τ. Residual error ε = ${rem<1e-6?"<1 ppm":(rem*100).toPrecision(3)+" %"}` + (rem>1e-6?`, equivalent to ${Math.max(0,Math.floor(-Math.log2(rem)-1))}-bit settling.`:", beyond 19-bit settling.");
+  }
+  return s;
+}
+
+/* ---------- UI wiring ---------- */
+const rFromSlider=v=>sig2(Math.pow(10,2+4*v/1000));
+const cFromSlider=v=>sig2(Math.pow(10,-8+5*v/1000));
+const sptFromSlider=v=>+(Math.pow(10,-1+1.6*v/100)).toPrecision(2);
+function syncLabels(){
+  $("#oV").textContent=S.V.toFixed(1)+" V"; $("#oR").textContent=fmt(S.R,"Ω",2); $("#oC").textContent=fmt(S.C,"F",2);
+  $("#oS").textContent=S.spt+" s"; $("#oK").textContent=S.k+"τ";
+  $("#tV").textContent=S.V.toFixed(1)+" V"; $("#tR").textContent=fmt(S.R,"Ω",2); $("#tC").textContent=fmt(S.C,"F",2);
+}
+function setMode(m){
+  S.mode=m; newEvent();
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m));
+  $("#kWrap").classList.toggle("hide",m!=="square");
+  if(m==="charge") S.sw="A"; if(m==="discharge") S.sw="B";
+}
+function setLevel(L){
+  S.level=L; try{localStorage.setItem("rc-level",L);}catch(e){}
+  document.querySelectorAll("#levelSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.level===L));
+  const adv=L==="eng"||L==="pro";
+  $("#sqBtn").classList.toggle("hide",!adv);
+  if(!adv&&S.mode==="square") setMode("charge");
+  $("#explain").innerHTML=EXPLAIN[L];
+  const q=$("#quiz");q.innerHTML="";
+  QUIZ[L].forEach(([Q,A])=>{const d=document.createElement("details");const sm=document.createElement("summary");sm.textContent=Q;const p=document.createElement("p");p.textContent=A;d.append(sm,p);q.appendChild(d);});
+  buildMeters();
+}
+$("#levelSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setLevel(b.dataset.level);});
+$("#modeSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setMode(b.dataset.mode);});
+function toggleSwitch(){setMode(S.sw==="A"?"discharge":"charge");}
+$("#switchHit").addEventListener("click",toggleSwitch);
+$("#switchHit").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleSwitch();}});
+$("#play").addEventListener("click",()=>{S.running=!S.running;$("#play").textContent=S.running?"Pause":"Play";});
+$("#reset").addEventListener("click",()=>{S.vc=0;S.t=0;S.hist=[];S.eSrc=0;S.eR=0;S.lastPush=-1;newEvent();});
+$("#sV").addEventListener("input",e=>{const nv=+e.target.value; S.V=nv; if(S.vc>nv)S.vc=Math.min(S.vc,nv); newEvent(); syncLabels();});
+$("#sR").addEventListener("input",e=>{S.R=rFromSlider(+e.target.value);newEvent();syncLabels();});
+$("#sC").addEventListener("input",e=>{S.C=cFromSlider(+e.target.value);newEvent();syncLabels();});
+$("#sS").addEventListener("input",e=>{S.spt=sptFromSlider(+e.target.value);syncLabels();});
+$("#sK").addEventListener("input",e=>{S.k=+e.target.value;syncLabels();});
+$("#elec").addEventListener("change",e=>{S.electrons=e.target.checked;$("#dotKey").textContent=S.electrons?"Moving dots show electrons (− to +), opposite to conventional current":"Moving dots show conventional current (+ to −)";});
+$("#legend").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;show[b.dataset.s]=!show[b.dataset.s];b.setAttribute("aria-pressed",show[b.dataset.s]);});
+
+S.R=rFromSlider(+$("#sR").value);S.C=cFromSlider(+$("#sC").value);S.spt=sptFromSlider(+$("#sS").value);
+syncLabels(); setMode("charge"); setLevel(S.level); fitCanvas();
+
+let last=performance.now(),nt=0;
+function frame(ts){
+  const dt=Math.min(0.05,(ts-last)/1000); last=ts;
+  if(S.running) advance(dt);
+  drawCircuit(dt); drawScope(); updateMeters();
+  if(ts-nt>250){$("#narr").textContent=narrate();nt=ts;}
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
