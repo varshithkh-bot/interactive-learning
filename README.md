@@ -46,4 +46,4 @@ rc/                 RC circuits
 
 A lesson is a page, a small `main.js` that exposes only the controls it needs, and a list of steps in `lesson.js` (the step schema is at the top of `core/mission.js`). Reuse the model, schematic and WHY? content of its topic. Start from the smallest set of controls that lets the learner discover the one idea; lesson 1 is the reference.
 
-Pushing to `main` redeploys the site, usually within a minute.
+Pushing to `main` redeploys the site, usually within a minute. The home page footer shows the date and time (IST) of the latest commit, read from GitHub, so it never needs editing by hand.

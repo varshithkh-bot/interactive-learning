@@ -348,3 +348,25 @@ table.mini th { text-align: left; color: var(--muted); font-weight: 400; }
 .m-later-t { margin: 0; font-weight: 700; }
 .m-later .m-small { margin: 0; }
 .m-later .btn { text-align: left; }
+
+/* ───────── Bench on desktop: the knobs sit right above the screen ─────────
+   top row: circuit | controls; below: the scope, sized so screen and knobs share one view */
+@media (min-width: 1061px) {
+  .bench { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .circuit-card { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1fr); align-content: start; }
+  .circuit-card .readouts { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+  .circuit-card .ro-v { font-size: 15px; }
+  .controls { grid-column: 2; grid-row: 1; }
+  .controls .params { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px 16px; margin-top: 12px; }
+  .scope-card { grid-column: 1 / -1; grid-row: 2; }
+  .lab #scope { height: clamp(260px, calc(100vh - 430px), 430px); }
+}
+.scope-bar .speed { margin-left: auto; font-size: 13px; }
+details.adv > summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+details.adv > summary:hover { color: var(--ink); }
+details.adv[open] > summary { margin-bottom: 4px; }
+
+/* ───────── Lesson on desktop: keep graph and controls on one screen, even on short laptops ───────── */
+@media (min-width: 901px) {
+  .lesson #scope { height: clamp(200px, calc(100vh - 484px), 320px); }
+}

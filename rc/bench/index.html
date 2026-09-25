@@ -45,6 +45,14 @@
           <button type="button" class="sbtn" id="refBtn" title="Pin the current sweep as a dashed reference">Ref</button>
           <button type="button" class="sbtn hide" id="cursBtn">Cursors</button>
         </div>
+        <label class="speed">Playback
+          <select id="speed">
+            <option value="real">Real time</option>
+            <option value="slow">Slow motion</option>
+            <option value="normal" selected>Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </label>
       </div>
       <div class="chips" id="chChips" aria-label="Traces"></div>
       <div id="cursorBox" class="hide"></div>
@@ -59,20 +67,12 @@
           <button type="button" data-sw="B">B · Discharge</button>
         </div>
         <button type="button" class="btn" id="resetCap">Reset capacitor</button>
-        <label class="speed">Playback
-          <select id="speed">
-            <option value="real">Real time</option>
-            <option value="slow">Slow motion</option>
-            <option value="normal" selected>Normal</option>
-            <option value="fast">Fast</option>
-          </select>
-        </label>
       </div>
       <div class="params" id="params"></div>
-      <div class="adv hide" id="adv">
-        <h3>Source &amp; real-world parts</h3>
+      <details class="adv hide" id="adv">
+        <summary>Source &amp; real-world parts</summary>
         <div class="params" id="advParams"></div>
-      </div>
+      </details>
     </div>
   </section>
 

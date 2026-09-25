@@ -66,7 +66,24 @@ h2.sec{font-size:15px;margin:30px 0 10px;color:var(--muted);font-weight:700}
     <li><span class="n">5</span><span>RC circuits as filters <small>· coming soon</small></span></li>
     <li><span class="n">6</span><span>Real, imperfect parts <small>· coming soon</small></span></li>
   </ol>
-  <footer>Want to skip ahead? The <a href="rc/bench/">RC engineering bench</a> previews all of these in one advanced lab. The original <a href="rc-circuit-explorer.html">RC circuit explorer</a> is still here too. Last updated 25 September 2026.</footer>
+  <footer>Want to skip ahead? The <a href="rc/bench/">RC engineering bench</a> previews all of these in one advanced lab. The original <a href="rc-circuit-explorer.html">RC circuit explorer</a> is still here too. Last updated <time id="updated" datetime="2026-09-25T23:16+05:30">25 September 2026, 11:16 pm IST</time>.</footer>
 </div>
+<script>
+// Show when the site last changed: the time of the latest commit on GitHub, in IST.
+// If GitHub can't be reached, the text written above stays as it is.
+(async () => {
+  const el = document.getElementById("updated");
+  try {
+    const r = await fetch("https://api.github.com/repos/varshithkh-bot/interactive-learning/commits?per_page=1");
+    if (!r.ok) return;
+    const [c] = await r.json();
+    const d = new Date(c.commit.committer.date);
+    const f = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).formatToParts(d);
+    const part = t => f.find(x => x.type === t)?.value;
+    el.textContent = `${part("day")} ${part("month")} ${part("year")}, ${part("hour")}:${part("minute")} ${part("dayPeriod").toLowerCase()} IST`;
+    el.dateTime = d.toISOString();
+  } catch { /* offline or rate-limited: keep the fallback */ }
+})();
+</script>
 </body>
 </html>
