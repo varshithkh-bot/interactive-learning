@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RC Engineering Bench</title>
+<meta name="description" content="A virtual electronics bench: discover the RC time constant by predicting, measuring, breaking and designing with a live oscilloscope.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../core/lab.css">
+</head>
+<body>
+<header class="top">
+  <a class="home" href="../../" aria-label="All labs">←</a>
+  <div class="brand"><b>RC BENCH</b><span>Engineering preview · all tools</span></div>
+  <div class="seg" id="modeSeg" role="group" aria-label="Lab mode">
+    <button type="button" data-mode="guided">Guided</button>
+    <button type="button" data-mode="free">Free lab</button>
+  </div>
+  <button type="button" class="btn nb-toggle" id="nbBtn">Notebook <span class="badge">0</span></button>
+</header>
+
+<main class="lab">
+  <section class="bench" aria-label="Bench">
+    <div class="inst circuit-card">
+      <div id="circuit"></div>
+      <div class="readouts" id="readouts" aria-label="Live readings"></div>
+    </div>
+
+    <div class="inst scope-card">
+      <canvas id="scope" tabindex="0" role="img" aria-label="Oscilloscope. Capacitor voltage and current against time. With cursors on, use arrow keys to move the selected cursor, A or B to choose it, Enter to flip the switch."></canvas>
+      <div class="scope-bar" role="toolbar" aria-label="Scope controls">
+        <div class="grp">
+          <button type="button" class="sbtn run" id="runBtn">Run</button>
+          <button type="button" class="sbtn stop" id="stopBtn">Stop</button>
+          <button type="button" class="sbtn" id="singleBtn">Single</button>
+        </div>
+        <div class="knob"><span>Time</span><button type="button" id="tMinus" aria-label="Less time per division">−</button><output class="mono" id="tOut"></output><button type="button" id="tPlus" aria-label="More time per division">+</button></div>
+        <div class="knob k-vc"><span>CH1</span><button type="button" id="vMinus" aria-label="Fewer volts per division">−</button><output class="mono" id="vOut"></output><button type="button" id="vPlus" aria-label="More volts per division">+</button></div>
+        <div class="knob k-i"><span>CH2</span><button type="button" id="iMinus" aria-label="Less current per division">−</button><output class="mono" id="iOut"></output><button type="button" id="iPlus" aria-label="More current per division">+</button></div>
+        <div class="grp">
+          <button type="button" class="sbtn" id="autoset">Autoset</button>
+          <button type="button" class="sbtn" id="refBtn" title="Pin the current sweep as a dashed reference">Ref</button>
+          <button type="button" class="sbtn hide" id="cursBtn">Cursors</button>
+        </div>
+      </div>
+      <div class="chips" id="chChips" aria-label="Traces"></div>
+      <div id="cursorBox" class="hide"></div>
+      <div id="measBox" class="hide"></div>
+    </div>
+
+    <div class="inst controls">
+      <div class="sw-row">
+        <div class="seg big" id="swSeg" role="group" aria-label="Switch position">
+          <button type="button" data-sw="A">A · Charge</button>
+          <button type="button" data-sw="B">B · Discharge</button>
+        </div>
+        <button type="button" class="btn" id="resetCap">Reset capacitor</button>
+        <label class="speed">Playback
+          <select id="speed">
+            <option value="real">Real time</option>
+            <option value="slow">Slow motion</option>
+            <option value="normal" selected>Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </label>
+      </div>
+      <div class="params" id="params"></div>
+      <div class="adv hide" id="adv">
+        <h3>Source &amp; real-world parts</h3>
+        <div class="params" id="advParams"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="mission inst" id="mission" aria-label="Mission"></aside>
+</main>
+
+<footer class="foot">Every number on this page is computed by an exact solution of the circuit, so the curves are the true exponentials.
+  <a href="../../rc-circuit-explorer.html">Classic RC explorer</a></footer>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

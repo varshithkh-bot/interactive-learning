@@ -43,10 +43,16 @@ export function crossTime(samples, f, level) {
 }
 
 export class Scope {
-  constructor(canvas, { channels, divsX = 10, divsY = 8, preDivs = 1, tdiv = 1 }) {
+  /**
+   * style "instrument": a dark bench scope with status text and per-division scales.
+   * style "plain": a calm graph in the page's colours with labelled axes, for beginners.
+   *   palette: { bg, grid, axis, text, ghost, ref }, yUnit / xUnit for tick labels, pad in px.
+   */
+  constructor(canvas, { channels, divsX = 10, divsY = 8, preDivs = 1, tdiv = 1, style = "instrument", pad, palette, xUnit = "s", yUnit = "V" }) {
     this.cv = canvas;
     this.ctx = canvas.getContext("2d");
-    Object.assign(this, { channels, divsX, divsY, preDivs, tdiv });
+    Object.assign(this, { channels, divsX, divsY, preDivs, tdiv, style, palette, xUnit, yUnit });
+    this.pad = pad || (style === "plain" ? { l: 46, r: 14, t: 14, b: 30 } : { l: 0, r: 0, t: 0, b: 0 });
     this.mode = "run";
     this.capture = null; this.prev = null; this.ref = null;
     this.pre = [];
@@ -118,16 +124,17 @@ export class Scope {
   }
 
   geometry() {
-    const w = this.cv.clientWidth, h = this.cv.clientHeight;
-    const dx = w / this.divsX, dy = h / this.divsY;
-    const X = t => (t / this.tdiv + this.preDivs) * dx;
-    const Y = (v, ch) => (this.divsY - ch.zero - v / ch.scale) * dy;
-    return { ctx: this.ctx, w, h, dx, dy, X, Y, scope: this };
+    const w = this.cv.clientWidth, h = this.cv.clientHeight, p = this.pad;
+    const dx = (w - p.l - p.r) / this.divsX, dy = (h - p.t - p.b) / this.divsY;
+    const X = t => p.l + (t / this.tdiv + this.preDivs) * dx;
+    const Y = (v, ch) => p.t + (this.divsY - ch.zero - v / ch.scale) * dy;
+    return { ctx: this.ctx, w, h, dx, dy, X, Y, pad: p, scope: this };
   }
 
   draw() {
     const g = this.geometry(), { ctx, w, h, dx, dy, X } = g;
     if (!w || !h) return;
+    if (this.style === "plain") return this._drawPlain(g);
     ctx.fillStyle = SCR.bg;
     ctx.fillRect(0, 0, w, h);
     ctx.lineWidth = 1;
@@ -197,6 +204,36 @@ export class Scope {
     }
   }
 
+  _drawPlain(g) {
+    const { ctx, w, h, dx, dy, X, Y, pad } = g, pal = this.palette, main = this.channels[0];
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, w, h);
+    const x0 = pad.l, x1 = w - pad.r, y0 = pad.t, y1 = h - pad.b;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.grid;
+    ctx.beginPath();
+    for (let i = 1; i <= this.divsX; i++) { const x = Math.round(x0 + i * dx) + 0.5; ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
+    for (let j = 0; j < this.divsY; j++) { const y = Math.round(y0 + j * dy) + 0.5; ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+    ctx.stroke();
+    ctx.strokeStyle = pal.axis;
+    ctx.beginPath(); ctx.moveTo(x0 + 0.5, y0); ctx.lineTo(x0 + 0.5, y1 + 0.5); ctx.lineTo(x1, y1 + 0.5); ctx.stroke();
+    ctx.fillStyle = pal.text;
+    ctx.font = '12px "Atkinson Hyperlegible",sans-serif';
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let i = 0; i <= this.divsX; i++) ctx.fillText(fmtScale((i - this.preDivs) * this.tdiv, this.xUnit).replace(/\.0+ /, " "), x0 + i * dx, y1 + 7);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let j = 0; j <= this.divsY - main.zero; j++) ctx.fillText(fmtScale(j * main.scale, this.yUnit), x0 - 7, Y(j * main.scale, main));
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, y0 - 4, x1 - x0, y1 - y0 + 8); ctx.clip();
+    if (this.ref) this._trace(this.ref, main, g, { alpha: 1, dash: [7, 6], width: 2, color: pal.ref });
+    if (this.prev && this.showPrev && this.prev !== this.ref) this._trace(this.prev, main, g, { alpha: 1, width: 2.5, color: pal.ghost });
+    for (const f of this.overlays) { ctx.save(); f(g); ctx.restore(); }
+    if (this.capture) for (const ch of this.channels) if (ch.visible) this._trace(this.capture, ch, g, { alpha: 1, width: ch.width || 3, dash: ch.dash });
+    ctx.restore();
+    for (const f of this.topOverlays || []) { ctx.save(); f(g); ctx.restore(); }
+  }
+
   _trace(c, ch, { ctx, X, Y }, o) {
     const s = c.samples;
     if (s.length < 2) return;
@@ -210,11 +247,15 @@ export class Scope {
     ctx.beginPath();
     const tmin = -this.preDivs * this.tdiv, tmax = this.span * 1.001;
     let first = true;
+    let lastP = null;
     for (const p of s) {
       if (p.t < tmin || p.t > tmax) continue;
       const x = X(p.t), y = Y(ch.get(p), ch);
       if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+      lastP = p;
     }
+    // A sweep that had already settled when it was replaced is drawn out flat to the edge.
+    if (c.hold && lastP && lastP.t < this.span) ctx.lineTo(X(this.span), Y(ch.get(lastP), ch));
     ctx.stroke();
     ctx.restore();
   }
@@ -252,13 +293,13 @@ export class Scope {
     let drag = null;
     const clampT = t => Math.max(-this.preDivs * this.tdiv, Math.min(this.span, t));
     const tAt = e => {
-      const r = cv.getBoundingClientRect();
-      return clampT(((e.clientX - r.left) / (r.width / this.divsX) - this.preDivs) * this.tdiv);
+      const r = cv.getBoundingClientRect(), p = this.pad;
+      return clampT(((e.clientX - r.left - p.l) / ((r.width - p.l - p.r) / this.divsX) - this.preDivs) * this.tdiv);
     };
     cv.addEventListener("pointerdown", e => {
       if (!this.cursors.on) return;
-      const r = cv.getBoundingClientRect(), px = e.clientX - r.left;
-      const at = t => (t / this.tdiv + this.preDivs) * r.width / this.divsX;
+      const r = cv.getBoundingClientRect(), p = this.pad, px = e.clientX - r.left;
+      const at = t => p.l + (t / this.tdiv + this.preDivs) * (r.width - p.l - p.r) / this.divsX;
       drag = Math.abs(at(this.cursors.a) - px) <= Math.abs(at(this.cursors.b) - px) ? "a" : "b";
       this.cursors.active = drag;
       this.cursors[drag] = tAt(e);
@@ -291,6 +332,7 @@ export class Scope {
 }
 
 export function fmtScale(x, unit) {
+  if (Math.abs(x) < 1e-15) return "0 " + unit;
   const P = [[1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"]];
   for (const [m, p] of P) if (Math.abs(x) >= m * 0.9995) return +(x / m).toPrecision(3) + " " + p + unit;
   return +(x / 1e-12).toPrecision(3) + " p" + unit;

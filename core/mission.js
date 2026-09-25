@@ -23,8 +23,19 @@ import { store } from "./ui.js";
 export const LOOP = ["play", "notice", "predict", "observe", "explain", "measure", "challenge", "design"];
 
 export class Mission {
-  constructor({ mount, steps, stages, lab, notebook, key, onCustom }) {
+  /**
+   * view: how much scaffolding to show around each step.
+   *   stages: stage chips · loop: the learning-loop strip · progress: "count" | "dots"
+   *   text: wording overrides (lock, lockNote, correct, surprise, predictedPrefix, next)
+   */
+  constructor({ mount, steps, stages, lab, notebook, key, onCustom, view = {} }) {
     Object.assign(this, { mount, steps, stages, lab, notebook, key, onCustom });
+    this.view = { stages: true, loop: true, progress: "count", ...view };
+    this.text = {
+      lock: "Lock in my prediction", lockNote: "The controls unlock once you commit. No peeking.",
+      correct: "✓ Your prediction held up.", surprise: "✗ Not what you predicted. That gap is exactly where the learning is.",
+      predictedPrefix: "You predicted:", next: "Next →", noted: "✓ Written in your lab notebook", ...(view.text || {}),
+    };
     const s = store.get(key, { i: 0, max: 0 });
     this.i = Math.min(s.i | 0, steps.length - 1);
     this.max = Math.min(s.max | 0, steps.length - 1);
@@ -122,13 +133,17 @@ export class Mission {
     const cur = this.loopPhase();
     const firstOf = id => this.steps.findIndex(s => s.stage === id);
     const stageIdx = this.stages.findIndex(s => s.id === st.stage);
-    let h = `<nav class="m-stages" aria-label="Lab stages">${this.stages.map((s, k) => {
+    const T = this.text;
+    let h = "";
+    if (this.view.stages) h += `<nav class="m-stages" aria-label="Lab stages">${this.stages.map((s, k) => {
       const f = firstOf(s.id), ok = f >= 0 && f <= this.max;
       return `<button type="button" class="m-stage${k === stageIdx ? " on" : ""}${k < stageIdx ? " past" : ""}" data-m="stage" data-k="${f}" ${ok ? "" : "disabled"} ${k === stageIdx ? 'aria-current="step"' : ""}>${s.label}</button>`;
-    }).join("")}</nav>
-    <ol class="m-loop" aria-label="Learning loop, current phase: ${cur}">${LOOP.map(p => `<li class="${p === cur ? "on" : ""}">${p}</li>`).join("")}</ol>
-    <p class="m-count">Step ${this.i + 1} of ${n}</p>
-    <h2 tabindex="-1">${st.title}</h2>
+    }).join("")}</nav>`;
+    if (this.view.loop) h += `<ol class="m-loop" aria-label="Learning loop, current phase: ${cur}">${LOOP.map(p => `<li class="${p === cur ? "on" : ""}">${p}</li>`).join("")}</ol>`;
+    h += this.view.progress === "dots"
+      ? `<p class="m-dots" aria-label="Step ${this.i + 1} of ${n}">${this.steps.map((_, k) => `<span class="${k < this.i ? "past" : k === this.i ? "on" : ""}"></span>`).join("")}</p>`
+      : `<p class="m-count">Step ${this.i + 1} of ${n}</p>`;
+    h += `<h2 tabindex="-1">${st.title}</h2>
     <div class="m-prompt">${v(st.prompt)}</div>`;
 
     if (st.predict) {
@@ -136,9 +151,9 @@ export class Mission {
       if (ph === "predict") {
         h += `<div class="m-q predict"><p class="q"><span class="chip">Predict</span>${pr.q}</p>
           <div class="opts" role="group" aria-label="Your prediction">${pr.options.map(o => `<button type="button" class="opt" data-m="pred" data-id="${o.id}" aria-pressed="${o.id === this.pred}">${o.label}</button>`).join("")}</div>
-          <button type="button" class="btn primary" data-m="lock" ${this.pred ? "" : "disabled"}>Lock in my prediction</button>
-          <p class="m-sub">The controls unlock once you commit. No peeking.</p></div>`;
-      } else h += `<p class="m-locked"><span aria-hidden="true">🔒</span> You predicted: <b>${lab}</b></p>`;
+          <button type="button" class="btn primary" data-m="lock" ${this.pred ? "" : "disabled"}>${T.lock}</button>
+          ${T.lockNote ? `<p class="m-sub">${T.lockNote}</p>` : ""}</div>`;
+      } else if (ph !== "done") h += `<p class="m-locked">${T.predictedPrefix} <b>${lab}</b></p>`;
     }
 
     if (ph === "act") {
@@ -159,18 +174,18 @@ export class Mission {
         const pr = st.predict, ok = this.pred === pr.answer;
         h += `<div class="m-pvo"><div><span>You predicted</span><b>${pr.options.find(o => o.id === this.pred).label}</b></div>
           <div><span>You observed</span><b>${v(st.observed) || pr.options.find(o => o.id === pr.answer).label}</b></div></div>
-          <p class="m-verdict ${ok ? "ok" : "surprise"}">${ok ? "✓ Your prediction held up." : "✗ Not what you predicted. That gap is exactly where the learning is."}</p>`;
+          <p class="m-verdict ${ok ? "ok" : "surprise"}">${ok ? T.correct : T.surprise}</p>`;
       }
       if (st.ask && this.askFb) h += `<p class="m-verdict ok">✓ ${this.askFb}</p>`;
       h += `<div class="m-reveal">${v(st.reveal)}</div>`;
       if (st.why?.length) h += `<p class="m-why">${st.why.map(w => `<button type="button" class="why" data-why="${w}">WHY?</button>`).join(" ")}</p>`;
-      if (this.noted) h += `<p class="m-noted">✓ Written in your lab notebook</p>`;
+      if (this.noted) h += `<p class="m-noted">${T.noted}</p>`;
       if (st.buttons) h += `<div class="m-actions">${st.buttons.map(b => `<button type="button" class="btn ${b.primary ? "primary" : ""}" data-m="custom" data-id="${b.id}">${b.label}</button>`).join("")}</div>`;
     }
 
     h += `<div class="m-nav"><button type="button" class="btn ghost" data-m="back" ${this.i ? "" : "disabled"}>← Back</button>
       ${ph !== "done" ? `<button type="button" class="btn ghost" data-m="skip" ${this.i < n - 1 ? "" : "disabled"}>Skip</button>` : ""}
-      ${ph === "done" && this.i < n - 1 ? `<button type="button" class="btn primary" data-m="next">Next →</button>` : ""}</div>`;
+      ${ph === "done" && this.i < n - 1 ? `<button type="button" class="btn primary" data-m="next">${T.next}</button>` : ""}</div>`;
     this.mount.innerHTML = h;
   }
 }

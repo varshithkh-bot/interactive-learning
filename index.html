@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Interactive Learning</title>
-<meta name="description" content="Hands-on simulations for physics and engineering, explained at four levels from Class 10 to M.Tech.">
+<meta name="description" content="Interactive engineering lessons: change something, watch what happens, and discover the equation yourself.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -42,20 +42,31 @@ h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0 0 8px}
 .card p{margin:0;color:var(--muted);font-size:15px}
 .tag{display:inline-block;margin-top:10px;font-size:13px;background:var(--soft);border-radius:20px;padding:2px 10px}
 footer{margin-top:32px;font-size:14px;color:var(--muted)}
+footer a{color:inherit}
+.path{list-style:none;padding:0;margin:0;display:grid;gap:10px;max-width:640px}
+.path li{display:flex;gap:14px;align-items:center;color:var(--muted);padding:10px 4px}
+.path .n{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:14px;flex:none}
+.path .card{flex:1;padding:14px 16px;color:var(--ink)}
+.path li.now{padding:0}
+.path li.now .n{background:var(--ink);color:var(--panel);border-color:var(--ink);font-weight:700}
+h2.sec{font-size:15px;margin:30px 0 10px;color:var(--muted);font-weight:700}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Interactive Learning</h1>
-  <p class="lede">Virtual laboratories for engineering. Don't memorise the equation: make it happen. Play with a real phenomenon, predict what it will do, measure it, break it, then design with it.</p>
-  <div class="list">
-    <a class="card" href="rc/">
-      <h2>RC Lab</h2>
-      <p>Discover the time constant yourself on a virtual bench with a working oscilloscope, four mystery faults and two design challenges.</p>
-      <span class="tag">Circuits · First-order systems</span>
-    </a>
-  </div>
-  <footer>More labs coming. The original <a href="rc-circuit-explorer.html">RC circuit explorer</a> is still here. Last updated 25 September 2026.</footer>
+  <p class="lede">Don't memorise the equation: make it happen. Change something, watch what it does, and work out why.</p>
+  <h2 class="sec">RC circuits</h2>
+  <ol class="path">
+    <li class="now"><span class="n">1</span>
+      <a class="card" href="rc/"><h2>How fast does a capacitor charge?</h2><p>Change R and C, watch the capacitor fill, and discover the time constant yourself.</p></a></li>
+    <li><span class="n">2</span><span>Charging and discharging <small>· coming soon</small></span></li>
+    <li><span class="n">3</span><span>Why the current fades away <small>· coming soon</small></span></li>
+    <li><span class="n">4</span><span>Measuring τ like an engineer <small>· coming soon</small></span></li>
+    <li><span class="n">5</span><span>RC circuits as filters <small>· coming soon</small></span></li>
+    <li><span class="n">6</span><span>Real, imperfect parts <small>· coming soon</small></span></li>
+  </ol>
+  <footer>Want to skip ahead? The <a href="rc/bench/">RC engineering bench</a> previews all of these in one advanced lab. The original <a href="rc-circuit-explorer.html">RC circuit explorer</a> is still here too. Last updated 25 September 2026.</footer>
 </div>
 </body>
 </html>

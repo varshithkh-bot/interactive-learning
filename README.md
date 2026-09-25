@@ -1,45 +1,49 @@
 # Interactive Learning
 
-Virtual laboratories for engineering concepts. **Don't memorise the equation. Make the equation happen.**
+Interactive lessons for engineering concepts. **Don't memorise the equation. Make the equation happen.**
 
-Each lab runs the same loop: play → notice → predict → observe → explain → measure → challenge → design.
+Each lesson teaches one idea: change something, watch what happens, predict, test, and only then name the pattern.
 
 **Live site:** https://varshithkh-bot.github.io/interactive-learning/
 
-| Lab | Path |
+| Lesson | Path |
 | --- | --- |
-| RC Lab | [rc/](rc/) |
+| RC 1 · How fast does a capacitor charge? | [rc/](rc/) |
+| RC engineering bench (advanced preview of later RC lessons) | [rc/bench/](rc/bench/) |
 | Classic RC explorer (original single-file version) | [rc-circuit-explorer.html](rc-circuit-explorer.html) |
+
+Design notes for lesson 1 are in [docs/rc-lesson-1-audit.md](docs/rc-lesson-1-audit.md).
 
 ## How it's built
 
-Static files served by GitHub Pages: no build step and no dependencies. The labs use native ES modules, so preview them through a local web server rather than by opening the file directly:
+Static files served by GitHub Pages: no build step and no dependencies. The lessons use native ES modules, so preview them through a local web server rather than by opening the file directly:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open http://localhost:8000/rc/.
+Then open http://localhost:8000/.
 
 ```
-core/               reusable pieces for every lab
-  scope.js          oscilloscope: channels, 1-2-5 scales, trigger, run/stop/single, ref trace, cursors, overlays
-  mission.js        guided step runner: setup → predict (locks controls) → act → check → ask → reveal → notebook
-  notebook.js       lab notebook of discoveries (stored in the browser)
+core/               reusable pieces for every lesson
+  scope.js          waveform display: "plain" graph for beginners, "instrument" scope for the bench
+  mission.js        guided step runner: setup → predict (locks controls) → act → check → ask → reveal → notes
+  notebook.js       "What I discovered" notes (stored in the browser)
   why.js            WHY? dialog with three depths: simply / mathematically / as an engineer
   ui.js             formatting, E24 values, slider and segmented controls
-  lab.css           shared instrument styling, light and dark
-rc/                 the RC laboratory
+  lab.css           shared styling, light and dark
+rc/                 RC circuits
   model.js          deterministic physics (exact exponential solver, source R, ESR, leakage, probe loading)
-  circuit.js        animated schematic
-  lesson.js         stages, steps, mysteries, challenges, WHY? content
-  main.js           wiring: sim loop, triggers, measurements, controls
+  circuit.js        animated schematic (simple mode for lessons, full mode for the bench)
+  why-content.js    WHY? explanations shared by every RC lesson
+  index.html, main.js, lesson.js         lesson 1: one circuit, one graph, one button, R and C
+  bench/            the engineering bench: oscilloscope, mysteries, design challenges
 ```
 
-**The physics is the source of truth.** Every number the learner sees comes from `model.js` or from measurements of captured waveforms. Lesson text never hard-codes an observed value. `window.rcLab.snapshot()` returns the live experiment state, ready for a future AI tutor that explains the simulation rather than inventing values.
+**The physics is the source of truth.** Every number a learner sees comes from `model.js` or from measurements of a simulated waveform; lesson text never hard-codes an observed value. `window.rcLab.snapshot()` returns the live experiment state for a future AI tutor.
 
-### Adding a lab
+### Adding a lesson
 
-Write a `model.js` for the phenomenon, pick the scope channels, and describe the lesson as a list of steps in `lesson.js` (see the schema at the top of `core/mission.js`). The scope, missions, notebook and WHY? come for free.
+A lesson is a page, a small `main.js` that exposes only the controls it needs, and a list of steps in `lesson.js` (the step schema is at the top of `core/mission.js`). Reuse the model, schematic and WHY? content of its topic. Start from the smallest set of controls that lets the learner discover the one idea; lesson 1 is the reference.
 
 Pushing to `main` redeploys the site, usually within a minute.

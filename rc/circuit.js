@@ -10,9 +10,10 @@ const PATH_A = "M60 122 V50 H150 L210 50 H430 V122 M430 136 V210 H60 V136";
 const PATH_B = "M430 122 V50 H210 L166 91 V210 H430 V136";
 
 export class Circuit {
-  constructor(mount, { onToggle }) {
+  constructor(mount, { onToggle, simple = false }) {
+    this.simple = simple;
     mount.innerHTML = `
-<svg viewBox="0 0 660 236" class="circuit" role="group" aria-label="Circuit: battery, two-way switch, resistor R and capacitor C, watched by a scope probe">
+<svg viewBox="${simple ? "0 0 500 236" : "0 0 660 236"}" class="circuit${simple ? " simple" : ""}" role="group" aria-label="Circuit: battery, two-way switch, resistor R and capacitor C, watched by a scope probe">
   <defs><filter id="glow" x="-30%" y="-200%" width="160%" height="500%"><feGaussianBlur stdDeviation="4"/></filter></defs>
   <rect id="boxSrc" class="realbox hide" x="24" y="56" width="74" height="100" rx="8"/>
   <text id="boxSrcT" class="tiny hide" x="61" y="170" text-anchor="middle">real source</text>
@@ -22,11 +23,13 @@ export class Circuit {
     <path d="M60 50 H150"/>
     <path id="wBat" d="M60 50 V122"/>
     <path id="wRs" class="hide" d="M60 50 V62${zigV(60, 62, 102)} V122"/>
-    <path d="M60 136 V210 H610"/>
-    <path d="M166 91 V210"/>
+    <path d="M60 136 V210 H430"/>
+    <path class="adv" d="M430 210 H610"/>
+    <path class="adv" d="M166 91 V210"/>
     <path d="M210 50 H260"/>
     <path id="rZig" d="${zigH(260, 50, 340)}"/>
-    <path d="M340 50 H610 V76"/>
+    <path d="M340 50 H430"/>
+    <path class="adv" d="M430 50 H610 V76"/>
     <path id="wCap" d="M430 50 V122"/>
     <path id="wEsr" class="hide" d="M430 50 V76${zigV(430, 76, 104)} V122"/>
     <path d="M430 136 V210"/>
@@ -47,20 +50,20 @@ export class Circuit {
   <text class="tiny" x="444" y="94" id="tEsr"></text>
   <text class="tiny" x="498" y="136" id="tLeak"></text>
   <text class="lbl" x="300" y="24" text-anchor="middle">R <tspan class="val" id="tR"></tspan></text>
-  <circle class="node" cx="430" cy="50" r="3.5"/>
-  <rect class="probe" x="600" y="76" width="20" height="36" rx="5"/>
-  <text class="tiny" x="610" y="70" text-anchor="middle">CH1</text>
+  <circle class="node adv" cx="430" cy="50" r="3.5"/>
+  <rect class="probe adv" x="600" y="76" width="20" height="36" rx="5"/>
+  <text class="tiny adv" x="610" y="70" text-anchor="middle">CH1</text>
   <text class="tiny" x="600" y="198" id="tProbe" text-anchor="end"></text>
-  <text class="tiny" x="610" y="130" id="tProbeIdeal" text-anchor="middle">scope</text>
+  <text class="tiny adv" x="610" y="130" id="tProbeIdeal" text-anchor="middle">scope</text>
   <path class="wire" d="M318 210 V220 M306 220 H330 M311 225 H325 M316 230 H320"/>
   <circle class="contact" cx="150" cy="50" r="5"/>
-  <circle class="contact" cx="166" cy="91" r="5"/>
-  <text class="lbl sw-l" x="140" y="40">A</text>
-  <text class="lbl sw-l" x="148" y="100">B</text>
+  <circle class="contact adv" cx="166" cy="91" r="5"/>
+  <text class="lbl sw-l adv" x="140" y="40">A</text>
+  <text class="lbl sw-l adv" x="148" y="100">B</text>
   <path id="pA" d="${PATH_A}" fill="none" stroke="none"/>
   <path id="pB" d="${PATH_B}" fill="none" stroke="none"/>
   <g id="dotsA"></g><g id="dotsB"></g>
-  <rect id="swHit" x="132" y="28" width="96" height="80" rx="10" fill="transparent" tabindex="0" role="button" aria-label="Toggle switch between A (charge) and B (discharge)"/>
+  <rect id="swHit" x="132" y="28" width="96" height="80" rx="10" fill="transparent" tabindex="0" role="button" aria-label="${simple ? "Close the switch to charge the capacitor" : "Toggle switch between A (charge) and B (discharge)"}"/>
   <g pointer-events="none">
     <line id="blade" x1="210" y1="50" x2="150" y2="50" stroke="var(--wire)" stroke-width="4" stroke-linecap="round"/>
     <circle class="node" cx="210" cy="50" r="5"/>
@@ -93,7 +96,7 @@ export class Circuit {
     const onA = st.sw === "A";
     this.el.blade.style.transform = onA ? "rotate(0deg)" : "rotate(-43deg)";
     this.el.dotsA.style.display = onA ? "" : "none";
-    this.el.dotsB.style.display = onA ? "none" : "";
+    this.el.dotsB.style.display = onA || this.simple ? "none" : "";
     const frac = Math.min(1, Math.abs(st.i) / Math.max(1e-15, st.iRef));
     const dir = onA ? Math.sign(st.i) : -Math.sign(st.i);
     const v = 120 * frac * dir * st.dt;
@@ -108,7 +111,7 @@ export class Circuit {
     const q = Math.max(0, st.vc / Math.max(1e-9, st.vRef)) * 6;
     for (let j = 0; j < 6; j++) { const o = Math.max(0, Math.min(1, q - j)).toFixed(2); this.plus[j].setAttribute("opacity", o); this.minus[j].setAttribute("opacity", o); }
     this.el.capFill.setAttribute("opacity", (0.35 * Math.max(0, Math.min(1, st.vc / Math.max(1e-9, st.vRef)))).toFixed(3));
-    this.el.heat.setAttribute("opacity", (0.9 * frac * frac).toFixed(3));
+    this.el.heat.setAttribute("opacity", this.simple ? "0" : (0.9 * frac * frac).toFixed(3));
 
     this._text("#tR", fmt(st.labels.R, "Ω", 3));
     this._text("#tC", fmt(st.labels.C, "F", 3));
