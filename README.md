@@ -10,6 +10,7 @@ Each lesson teaches one idea: change something, watch what happens, predict, tes
 | --- | --- |
 | RC 1 · How fast does a capacitor charge? | [rc/](rc/) |
 | RC engineering bench (advanced preview of later RC lessons) | [rc/bench/](rc/bench/) |
+| Signals · Can a camera lie? (sampling and aliasing, a single self-contained page) | [sampling/](sampling/) |
 | Classic RC explorer (original single-file version) | [rc-circuit-explorer.html](rc-circuit-explorer.html) |
 
 Design notes for lesson 1 are in [docs/rc-lesson-1-audit.md](docs/rc-lesson-1-audit.md).

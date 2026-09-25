@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Can a Camera Lie?</title>
+<meta name="description" content="A two-minute experiment: film a spinning disc and discover why fast motion can look slow, frozen, or even backwards.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #EDF1F5; --panel: #FFFFFF; --panel2: #F5F7FA; --ink: #111C2C; --muted: #56677C;
+  --line: #D2DAE4; --line2: #E4E9EF; --accent: #2456D1; --accent-soft: #E6EDFC;
+  --dot: #E4572E; --disc: #F1F4F8; --disc-edge: #C9D3DE; --tick: #B9C4D1;
+  --real: #E4572E; --seen: #2456D1; --ghost: #7C8BA0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0C131D; --panel: #131D2A; --panel2: #182434; --ink: #E4ECF6; --muted: #93A4BA;
+    --line: #273649; --line2: #1F2C3C; --accent: #7EA6FF; --accent-soft: #1B2A44;
+    --dot: #FF7A4D; --disc: #1A2636; --disc-edge: #2E4057; --tick: #3A4E68;
+    --real: #FF7A4D; --seen: #7EA6FF; --ghost: #8FA0B8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0C131D; --panel: #131D2A; --panel2: #182434; --ink: #E4ECF6; --muted: #93A4BA;
+  --line: #273649; --line2: #1F2C3C; --accent: #7EA6FF; --accent-soft: #1B2A44;
+  --dot: #FF7A4D; --disc: #1A2636; --disc-edge: #2E4057; --tick: #3A4E68;
+  --real: #FF7A4D; --seen: #7EA6FF; --ghost: #8FA0B8;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 17px; line-height: 1.5;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.hide { display: none !important; }
+
+.top { display: flex; align-items: center; gap: 12px; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); }
+.home { text-decoration: none; color: var(--muted); font-size: 20px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; }
+.home:hover { background: var(--panel); color: var(--ink); }
+.brand b { display: block; font-size: 16px; line-height: 1.2; }
+.brand span { font-size: 13px; color: var(--muted); }
+
+main { max-width: 1040px; margin: 0 auto; padding: 4px 16px 48px; }
+
+/* the question: always one short card above the experiment */
+.prompt { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; min-height: 120px; }
+.prompt h1 { font-size: clamp(20px, 2.4vw, 26px); line-height: 1.2; margin: 0 0 6px; }
+.prompt p { margin: 0 0 8px; max-width: 70ch; }
+.prompt .muted { color: var(--muted); font-size: 15px; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.opt { border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 9px 14px; cursor: pointer; min-height: 44px; text-align: left; }
+.opt:hover { border-color: var(--muted); }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--panel); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 700; min-height: 44px; }
+.btn.quiet { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 400; }
+.btn:hover { opacity: .9; }
+.cw { color: var(--real); font-weight: 700; white-space: nowrap; }
+.ccw { color: var(--seen); font-weight: 700; white-space: nowrap; }
+.view figcaption .cap-cw { color: var(--real); font-weight: 700; }
+.view figcaption .live span { white-space: normal; }
+
+/* the experiment: two views of the same moment */
+.stage { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.view { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px 12px 10px; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.view canvas { width: 100%; max-width: 380px; aspect-ratio: 1; display: block; }
+.view figcaption { text-align: center; margin-top: 6px; }
+.view figcaption b { display: block; font-size: 16px; }
+.view figcaption span { font-size: 14px; color: var(--muted); }
+.view figcaption .live { display: block; font-size: 15px; font-weight: 700; min-height: 1.5em; }
+#strip { width: 100%; max-width: 380px; height: 44px; margin-top: 8px; display: block; }
+.strip-label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+.control { margin-top: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 20px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px 16px; align-items: center; }
+.control label { font-weight: 700; }
+.control output { font-family: "JetBrains Mono", monospace; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.control .ends { grid-column: 2; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: -6px; }
+.control .extra { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+input[type=range] { width: 100%; height: 36px; accent-color: var(--real); cursor: pointer; }
+input[type=range]:disabled { opacity: .35; cursor: not-allowed; }
+.control.locked label { opacity: .5; }
+.pulse input[type=range] { animation: nudge 1.4s ease-in-out 3; }
+@keyframes nudge { 50% { transform: translateX(6px); } }
+.toggle[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+/* understanding, layered: each layer appears only after the one before */
+.explain { margin-top: 14px; display: grid; gap: 12px; }
+.layer { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; animation: rise .4s ease; }
+.layer h2 { font-size: 19px; margin: 0 0 6px; }
+.layer p { margin: 0 0 8px; max-width: 72ch; }
+.layer .big { font-size: 19px; }
+details.math summary { cursor: pointer; font-weight: 700; }
+details.math .eq { font-family: "JetBrains Mono", monospace; font-size: 15px; background: var(--panel2); border-radius: 8px; padding: 10px 12px; margin: 8px 0; overflow-x: auto; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .layer { animation: none; } .pulse input[type=range] { animation: none; } }
+
+
+/* desktop: the story on the left, the phenomenon pinned on the right so it never scrolls away */
+@media (min-width: 900px) {
+  main { max-width: 1200px; display: grid; grid-template-columns: minmax(320px, 380px) minmax(0, 1fr); column-gap: 18px;
+         grid-template-areas: "prompt stage" "control stage" "explain stage"; grid-template-rows: auto auto 1fr; align-items: start; }
+  .prompt { grid-area: prompt; }
+  .control { grid-area: control; grid-template-columns: 1fr auto; }
+  .control label { grid-column: 1; }
+  .control output { grid-column: 2; }
+  .control input { grid-column: 1 / -1; }
+  .control .ends { grid-column: 1 / -1; }
+  .explain { grid-area: explain; }
+  .stage { grid-area: stage; position: sticky; top: 12px; margin-top: 0; }
+  .view canvas, #strip { max-width: min(380px, calc(100vh - 290px)); }
+  .view { padding: 14px 12px 12px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .prompt { padding: 14px 16px; }
+  .stage { gap: 8px; }
+  .view { padding: 8px 6px; border-radius: 12px; }
+  .view figcaption b { font-size: 14px; }
+  .view figcaption span { font-size: 12.5px; }
+  .control { grid-template-columns: 1fr; padding: 12px 16px; }
+  .control .ends { grid-column: 1; }
+  .control output { justify-self: start; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="home" href="../" aria-label="All lessons">←</a>
+  <div class="brand"><b>Can a camera lie?</b><span>Sampling · a two-minute experiment</span></div>
+</header>
+
+<main>
+  <section class="prompt" id="prompt" aria-live="polite"></section>
+
+  <section class="stage" aria-label="Experiment">
+    <figure class="view">
+      <canvas id="real" role="img" aria-label="The real disc, spinning clockwise"></canvas>
+      <figcaption><b>The real disc</b><span class="cap-cw">↻ always spinning clockwise</span></figcaption>
+    </figure>
+    <figure class="view">
+      <canvas id="cam" role="img" aria-label="What the camera records: one still photo at a time"></canvas>
+      <figcaption><b>What the camera sees</b><span>6 photos every second</span><span class="live" id="looks"></span></figcaption>
+      <canvas id="strip" aria-hidden="true"></canvas>
+      <div class="strip-label">the camera's last 6 photos, oldest first →</div>
+    </figure>
+  </section>
+
+  <section class="control locked" id="control">
+    <label for="speed">Spin speed</label>
+    <input type="range" id="speed" min="0" max="7" step="0.05" value="0.6" disabled>
+    <output id="speedOut" for="speed"></output>
+    <div class="ends"><span>slow</span><span>fast</span></div>
+    <div class="extra hide" id="extra">
+      <button type="button" class="btn quiet toggle" id="slowBtn" aria-pressed="false">Slow down time</button>
+      <button type="button" class="btn quiet toggle hide" id="ghostBtn" aria-pressed="true">Show the other spin</button>
+    </div>
+  </section>
+
+  <section class="explain" id="explain"></section>
+</main>
+
+<script>
+(() => {
+  const FPS = 6;                 // the camera: photos per second
+  const SLOW = 1 / 16;           // slow motion factor
+  const $ = s => document.querySelector(s);
+
+  // ───────── the world: exact, deterministic ─────────
+  const S = {
+    state: "predict", speed: 0.6,
+    angle: 0,            // real dot, in turns (cumulative, clockwise)
+    since: 0,            // world time since the last photo
+    photo: 0, prev: 0,   // cumulative angle at the last two photos
+    photos: [],          // last 6 photos (for the strip)
+    flash: 0, slow: false, ghostOn: false, ghost: 0,
+    predicted: null, backT: 0, stillT: 0, stillFound: false, slowPhotos: 0, exploreT: 0,
+  };
+  const perPhoto = () => S.speed / FPS;                            // real turns between photos
+  const seenStep = () => { const d = perPhoto(); return d - Math.round(d); };   // what the eye infers: the shortest hop
+  const aliasSpeed = () => seenStep() * FPS;
+
+  function takePhoto(a) {
+    S.prev = S.photo; S.photo = a;
+    S.photos.push(a); if (S.photos.length > 6) S.photos.shift();
+    S.flash = 1;
+    S.ghost = a + aliasSpeed() * S.since;                          // the impostor agrees with every photo
+    if (S.slow && ++S.slowPhotos === 2) renderExplain();   // the explanation waits until they have watched two gaps
+  }
+
+  function step(dt) {
+    const w = dt * (S.slow ? SLOW : 1);
+    S.angle += S.speed * w;
+    S.ghost += aliasSpeed() * w;
+    S.since += w;
+    const period = 1 / FPS;
+    while (S.since >= period) { S.since -= period; takePhoto(S.angle - S.speed * S.since); }
+    S.flash = Math.max(0, S.flash - dt * (S.slow ? 2.5 : 7));
+
+    const app = seenStep();
+    if (S.state === "explore") {
+      S.exploreT += dt;
+      // count only a clear, smooth drift backwards, not wild half-turn jumps
+      S.backT = app < -0.03 && app > -0.25 && S.speed > 1 ? S.backT + dt : Math.max(0, S.backT - dt);
+      if (S.backT > 1.6) go("surprise");
+      if (S.exploreT > 25 && !S.hinted) { S.hinted = true; render(); }
+    }
+    if (["why", "alias", "done"].includes(S.state) && !S.stillFound) {
+      S.stillT = Math.abs(app) < 0.006 && S.speed > 1 ? S.stillT + dt : 0;
+      if (S.stillT > 1.2) { S.stillFound = true; renderExplain(); }
+    }
+  }
+
+  // ───────── drawing ─────────
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let C = {};
+  const readColors = () => { C = { dot: css("--dot"), disc: css("--disc"), edge: css("--disc-edge"), tick: css("--tick"), real: css("--real"), seen: css("--seen"), ghost: css("--ghost"), ink: css("--ink"), muted: css("--muted"), panel: css("--panel") }; };
+  readColors();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", readColors);
+
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = devicePixelRatio || 1;
+    const w = Math.round(r.width * d), h = Math.round(r.height * d);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0);
+    return [ctx, r.width, r.height];
+  }
+  const P = (cx, cy, r, a) => [cx + r * Math.sin(2 * Math.PI * a), cy - r * Math.cos(2 * Math.PI * a)];
+  const rad = a => 2 * Math.PI * a - Math.PI / 2;                   // turns (clockwise from top) → canvas angle
+
+  function disc(ctx, cx, cy, R) {
+    ctx.fillStyle = C.disc; ctx.strokeStyle = C.edge; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = C.tick; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 12; k++) { const [x1, y1] = P(cx, cy, R * 0.9, k / 12), [x2, y2] = P(cx, cy, R * (k % 3 ? 0.95 : 0.99), k / 12); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    ctx.fillStyle = C.edge; ctx.beginPath(); ctx.arc(cx, cy, R * 0.06, 0, 7); ctx.fill();
+  }
+  function dot(ctx, cx, cy, R, a, color, alpha = 1, ring = false) {
+    const [x, y] = P(cx, cy, R * 0.72, a);
+    ctx.globalAlpha = alpha;
+    if (ring) { ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(x, y, R * 0.1, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+    else { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, R * 0.1, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+  function arrowArc(ctx, cx, cy, r, from, to, color, width) {
+    // arc along the path from→to (clockwise if to > from), with an arrowhead at the end
+    const cw = to >= from;
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(cx, cy, r, rad(from), rad(to), !cw); ctx.stroke();
+    const [x, y] = P(cx, cy, r, to), t = rad(to) + (cw ? Math.PI / 2 : -Math.PI / 2), h = width * 2.6;
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(x + Math.cos(t) * h, y + Math.sin(t) * h);
+    ctx.lineTo(x + Math.cos(t + 2.4) * h, y + Math.sin(t + 2.4) * h);
+    ctx.lineTo(x + Math.cos(t - 2.4) * h, y + Math.sin(t - 2.4) * h);
+    ctx.fill();
+  }
+  const explaining = () => ["why", "alias", "done"].includes(S.state);
+
+  let lastFrameSweep = 0;
+  function drawReal() {
+    const [ctx, w, h] = fit($("#real")), cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.44;
+    ctx.clearRect(0, 0, w, h);
+    disc(ctx, cx, cy, R);
+    if (explaining()) {
+      // the journey the camera never sees: from the last photo to now
+      const sweep = S.angle - S.photo;
+      dot(ctx, cx, cy, R, S.photo, C.muted, 0.9, true);
+      if (sweep > 0.004) arrowArc(ctx, cx, cy, R * 0.72, S.photo, S.photo + Math.min(sweep, 0.985), C.real, Math.max(3, R * 0.05));
+      if (S.ghostOn && S.state !== "why") dot(ctx, cx, cy, R, S.ghost, C.ghost, 0.9, true);
+    }
+    // motion blur: a spinning dot is a smear, not a string of dots
+    const blur = Math.min(0.45, lastFrameSweep);
+    for (let k = 6; k >= 1; k--) dot(ctx, cx, cy, R, S.angle - blur * k / 6, C.dot, 0.28 * (1 - k / 7));
+    dot(ctx, cx, cy, R, S.angle, C.dot);
+  }
+
+  function drawCam() {
+    const [ctx, w, h] = fit($("#cam")), cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.44;
+    ctx.clearRect(0, 0, w, h);
+    disc(ctx, cx, cy, R);
+    if (explaining()) {
+      const hop = seenStep();
+      dot(ctx, cx, cy, R, S.prev, C.muted, 0.9, true);
+      if (Math.abs(hop) > 0.004) arrowArc(ctx, cx, cy, R * 0.72, S.photo - hop, S.photo, C.seen, Math.max(3, R * 0.05));
+    }
+    dot(ctx, cx, cy, R, S.photo, C.dot);
+    // viewfinder corners: this is a camera's picture, not the world
+    const m = 6, L = Math.min(w, h) * 0.1;
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 2;
+    for (const [x, y, sx, sy] of [[m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1]]) {
+      ctx.beginPath(); ctx.moveTo(x, y + sy * L); ctx.lineTo(x, y); ctx.lineTo(x + sx * L, y); ctx.stroke();
+    }
+    if (S.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${0.55 * S.flash})`; ctx.fillRect(0, 0, w, h); }
+  }
+
+  function drawStrip() {
+    const [ctx, w, h] = fit($("#strip")), n = 6, gap = 6, s = Math.min(h - 4, (w - gap * (n - 1)) / n);
+    ctx.clearRect(0, 0, w, h);
+    const x0 = (w - (s * n + gap * (n - 1))) / 2;
+    for (let k = 0; k < n; k++) {
+      const a = S.photos[S.photos.length - n + k], cx = x0 + k * (s + gap) + s / 2, cy = h / 2, R = s * 0.46;
+      ctx.fillStyle = C.disc; ctx.strokeStyle = C.edge; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill(); ctx.stroke();
+      if (a == null) continue;
+      const [x, y] = P(cx, cy, R * 0.7, a);
+      ctx.fillStyle = C.dot; ctx.globalAlpha = 0.45 + 0.55 * (k / (n - 1));
+      ctx.beginPath(); ctx.arc(x, y, Math.max(2.5, R * 0.18), 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    }
+  }
+
+  function looks() {
+    const a = seenStep();
+    if (S.speed < 0.05) return "";
+    if (Math.abs(a) > 0.3) return `<span class="muted">jumping around: hard to tell which way</span>`;
+    if (Math.abs(a) < 0.006) return `<span class="ccw">■ standing still</span>`;
+    return a < 0 ? `<span class="ccw">↺ looks like it spins backwards</span>` : `<span class="cw">↻ looks like it spins forwards</span>`;
+  }
+
+  // ───────── the conversation ─────────
+  const PRED = {
+    faster: "It spins faster and faster",
+    blur: "It turns into a blur",
+    strange: "Something strange happens",
+  };
+  const REASON = {
+    broken: "The camera is broken",
+    reversed: "The disc really changed direction",
+    missed: "The camera misses something between photos",
+  };
+
+  function go(s) { S.state = s; render(); }
+
+  function render() {
+    const p = $("#prompt");
+    const speed = $("#speed"), control = $("#control");
+    speed.disabled = S.state === "predict";
+    control.classList.toggle("locked", S.state === "predict");
+    $("#extra").classList.toggle("hide", !explaining());
+    $("#ghostBtn").classList.toggle("hide", !["alias", "done"].includes(S.state));
+
+    if (S.state === "predict") {
+      p.innerHTML = `<h1>A camera is filming a spinning disc.</h1>
+        <p>On the left, the real disc. On the right, what the camera records: <b>6 photos every second</b>.</p>
+        <p><b>If you spin the disc faster and faster, what will the camera show?</b></p>
+        <div class="opts">${Object.entries(PRED).map(([k, v]) => `<button type="button" class="opt" data-pred="${k}">${v}</button>`).join("")}</div>`;
+    } else if (S.state === "explore") {
+      p.innerHTML = `<h1>Let's find out.</h1>
+        <p>Drag the slider to spin the disc faster. Keep your eyes on the <b>camera</b>.</p>
+        ${S.hinted ? `<p class="muted">Keep going: try going well past the middle of the slider, slowly.</p>` : ""}`;
+    } else if (S.state === "surprise") {
+      const ok = S.predicted === "strange";
+      p.innerHTML = `<h1>Wait. Look at the camera.</h1>
+        <p>The real disc never changed direction: it's still spinning <span class="cw">↻ clockwise</span>. But the camera shows it going <span class="ccw">↺ backwards</span>.</p>
+        <p class="muted">${ok ? "You guessed something strange would happen. It did." : `You predicted “${PRED[S.predicted]}”. That's what most people expect.`}</p>
+        <p><b>What do you think is going on?</b></p>
+        <div class="opts">${Object.entries(REASON).map(([k, v]) => `<button type="button" class="opt" data-reason="${k}">${v}</button>`).join("")}</div>`;
+    } else if (S.state === "why") {
+      p.innerHTML = `<h1>Time is slowed down 16×.</h1>
+        <p>The <span class="cw">orange arc</span> is how far the real dot travels between two photos. The <span class="ccw">blue arrow</span> is how the camera's photos make it look.</p>
+        <p class="muted">Watch a few flashes. If the disc is too slow to be interesting, spin it faster.</p>`;
+    } else if (S.state === "alias") {
+      p.innerHTML = `<h1>Two different spins. The same photos.</h1>
+        <p>The dashed dot on the left spins slowly <span class="ccw">backwards</span>. Watch the flashes: at every photo it's in <b>exactly</b> the same place as the real dot.</p>`;
+    } else if (S.state === "done") {
+      p.innerHTML = `<h1>The camera didn't lie. It just couldn't see between photos.</h1>
+        <p class="muted">Keep playing with the slider, or start again.</p>
+        <div class="opts"><button type="button" class="btn quiet" data-act="restart">Start again</button></div>`;
+    }
+    renderExplain();
+  }
+
+  function renderExplain() {
+    const e = $("#explain");
+    let h = "";
+    if (["why", "alias", "done"].includes(S.state) && S.slowPhotos >= 2) {
+      h += `<div class="layer"><h2>What happened?</h2>
+        <p class="big">Between two photos the dot travels <b>almost a whole turn</b>, clockwise. It lands just short of where it was.</p>
+        <p>The camera never sees that journey, only where the dot is at each flash. From one photo to the next, the shortest way to get there is a small step <span class="ccw">backwards</span>, so that's what we see.</p>
+        ${S.state === "why" ? `<div class="opts"><button type="button" class="btn" data-act="alias">Can the camera tell the difference?</button></div>` : ""}</div>`;
+    }
+    if (["alias", "done"].includes(S.state)) {
+      h += `<div class="layer"><h2>It has a name: aliasing</h2>
+        <p>The camera only looks at <b>moments</b>, not the motion in between. That's called <b>sampling</b>: each photo is a sample.</p>
+        <p>Very different motions can leave exactly the same samples. When a fast motion shows up looking like a slower one (or a backwards one, or a frozen one), that's <b>aliasing</b>: the fast spin is hiding behind an alias.</p>
+        <p><b>Try this:</b> can you make the camera see the disc <b>standing perfectly still</b> while it's really spinning fast?</p>
+        ${S.stillFound ? `<p class="big">✓ Frozen. It's now turning <b>exactly once between photos</b>, so every photo catches the dot in the same spot. The camera sees nothing move at all.</p>` : ""}
+        <details class="math"><summary>The maths, if you want it</summary>
+          <p>Let the disc spin <i>f</i> turns per second, and the camera take <i>s</i> photos per second. Between photos the dot turns <i>f</i> ÷ <i>s</i> turns. Whole turns are invisible to the camera, so it only sees what's left over:</p>
+          <div class="eq">seen per photo = f/s − (nearest whole number)</div>
+          <p>With s = 6: at 5.5 turns per second the dot turns 0.92 turns between photos, which looks like −0.08 turns: slowly backwards. At exactly 6 it turns 1.00: frozen.</p>
+          <p>To follow a motion faithfully you need <b>more than 2 photos per turn</b> (s &gt; 2f). Engineers call this the Nyquist rate. Below it, aliasing is guaranteed.</p>
+        </details>
+        ${S.state === "alias" ? `<div class="opts"><button type="button" class="btn" data-act="done">I get it</button></div>` : ""}</div>`;
+    }
+    if (S.state === "done") {
+      h += `<div class="layer"><h2>In one sentence</h2>
+        <p class="big">A camera takes snapshots, not a movie of everything, so a fast motion can look slow, frozen or backwards.</p>
+        <p class="muted">You've seen this in car wheels on video, helicopter blades that seem to stand still, and fans under flickering lights. The same thing happens when phones record sound or cameras record video: anything measured in snapshots can be fooled.</p></div>`;
+    }
+    if (e.dataset.h !== h) { e.innerHTML = h; e.dataset.h = h; }
+  }
+
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest("button");
+    if (!b) return;
+    if (b.dataset.pred) {
+      S.predicted = b.dataset.pred; go("explore");
+      $("#control").classList.add("pulse"); $("#speed").focus({ preventScroll: true });
+    }
+    if (b.dataset.reason) {
+      S.reason = b.dataset.reason; S.slow = true; S.slowPhotos = 0; syncToggles();
+      if (S.speed < 3.4) setSpeed(5.4);                           // keep it in the surprising range for the slow-motion look
+      go("why");
+    }
+    if (b.dataset.act === "alias") { S.ghostOn = true; S.slow = false; syncToggles(); go("alias"); }
+    if (b.dataset.act === "done") go("done");
+    if (b.dataset.act === "restart") {
+      Object.assign(S, { state: "predict", slow: false, ghostOn: false, predicted: null, backT: 0, stillT: 0, stillFound: false, slowPhotos: 0, exploreT: 0, hinted: false });
+      setSpeed(0.6); syncToggles(); render(); scrollTo({ top: 0, behavior: "smooth" });
+    }
+    if (b.id === "slowBtn") { S.slow = !S.slow; syncToggles(); }
+    if (b.id === "ghostBtn") { S.ghostOn = !S.ghostOn; syncToggles(); }
+  });
+
+  function syncToggles() {
+    $("#slowBtn").setAttribute("aria-pressed", String(S.slow));
+    $("#slowBtn").textContent = S.slow ? "Slow motion: on" : "Slow down time";
+    $("#ghostBtn").setAttribute("aria-pressed", String(S.ghostOn));
+    $("#ghostBtn").textContent = S.ghostOn ? "Hide the other spin" : "Show the other spin";
+  }
+  function setSpeed(v) { S.speed = v; $("#speed").value = v; showSpeed(); }
+  function showSpeed() { $("#speedOut").textContent = `${S.speed.toFixed(1)} turns per second`; }
+  $("#speed").addEventListener("input", e => { S.speed = +e.target.value; showSpeed(); $("#control").classList.remove("pulse"); });
+
+  // ───────── loop (a timer fallback keeps time flowing if animation frames pause) ─────────
+  let last = performance.now(), tick = 0, lastLooks = "";
+  function frame(ts) {
+    const dt = Math.min(0.25, Math.max(0, (ts - last) / 1000));
+    last = ts;
+    const before = S.angle;
+    step(dt);
+    lastFrameSweep = S.angle - before;
+    drawReal(); drawCam(); drawStrip();
+    const l = S.state === "predict" || S.state === "explore" ? "" : looks();
+    if (l !== lastLooks) { $("#looks").innerHTML = l; lastLooks = l; }
+    const my = ++tick;
+    requestAnimationFrame(t => { if (my === tick) frame(t); });
+    setTimeout(() => { if (my === tick) frame(performance.now()); }, 200);
+  }
+  window.sampling = { state: () => S.state, snapshot: () => ({ ...S, photos: undefined, seenStep: seenStep() }) };   // for testing and a future tutor
+  showSpeed(); syncToggles(); render();
+  frame(performance.now());
+})();
+</script>
+</body>
+</html>
