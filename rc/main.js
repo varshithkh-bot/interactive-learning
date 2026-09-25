@@ -168,7 +168,7 @@ const notebook = new Notebook({ key: "rc1:notebook", toggle: $("#nbBtn"), title:
 new Why(WHY, { depth: () => "simple" });
 const mission = new Mission({
   mount: $("#mission"), steps: STEPS, stages: STAGES, lab, notebook, key: "rc1:progress", view: VIEW,
-  onCustom: id => { if (id === "restart") mission.start(0); },
+  onCustom: id => { if (id === "restart") mission.restart(); },
 });
 
 // For a future AI tutor: the live experiment, straight from the model.

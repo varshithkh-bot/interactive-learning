@@ -357,7 +357,7 @@ const mission = new Mission({ mount: $("#mission"), steps: STEPS, stages: STAGES
 function custom(id) {
   if (id === "free") setMode("free");
   if (id === "guided") setMode("guided");
-  if (id === "restart") { setMode("guided"); mission.start(0); }
+  if (id === "restart") { setMode("guided"); mission.restart(); }
 }
 
 function setMode(m) {

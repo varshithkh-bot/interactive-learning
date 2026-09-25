@@ -86,7 +86,7 @@ Discharging, current, energy, square waves, filters, measurement technique and n
 | Guided / Free lab toggle | Two modes to understand | Bench | – |
 | Stage chips, loop strip | Course structure, not content | Bench | – |
 
-Step 1 went from **38 controls and 9 live numbers to 4 controls** (Charge, My notes, Back, Skip) **and 1 number**. Even the busiest step has 10 controls, and 6 of them are the two R/C sliders with their ÷2/×2 buttons. That is well past the 30 % target.
+Step 1 went from **38 controls and 9 live numbers to 4 controls** (Charge, My notes, Back, "I'll look at this later") **and 1 number**. Even the busiest step has 10 controls, and 6 of them are the two R/C sliders with their ÷2/×2 buttons. That is well past the 30 % target.
 
 ## D. Revised learning flow
 
@@ -121,3 +121,7 @@ The equation first appears in step 5, as the answer to a question the student ha
 - **Discover before being told?** Yes. τ is named only after the student sees that doubling R while halving C changes nothing.
 - **Any controls only an engineer would care about?** None in lesson 1; they're on the bench.
 - **Usable by an 11th-grade student?** That's the design target. It hasn't been tested with real students yet, and that is the next step.
+
+## Follow-up: no "Skip"
+
+"Skip" made moving on feel like leaving something undone, which can make students anxious about missing out. It's now **"I'll look at this later"**. The step is bookmarked, not marked as skipped: it shows as a hollow dot you can tap to return to, and the last step lists everything saved for later, with a button back to each. Finishing a saved step removes it from the list. There's no penalty and no red marker.

@@ -34,13 +34,22 @@ export class Mission {
     this.text = {
       lock: "Lock in my prediction", lockNote: "The controls unlock once you commit. No peeking.",
       correct: "✓ Your prediction held up.", surprise: "✗ Not what you predicted. That gap is exactly where the learning is.",
-      predictedPrefix: "You predicted:", next: "Next →", noted: "✓ Written in your lab notebook", ...(view.text || {}),
+      predictedPrefix: "You predicted:", next: "Next →", noted: "✓ Written in your lab notebook",
+      later: "I'll look at this later", laterTitle: "Saved for later", laterIntro: "You set these aside. Pick one up whenever you're ready.",
+      ...(view.text || {}),
     };
     const s = store.get(key, { i: 0, max: 0 });
     this.i = Math.min(s.i | 0, steps.length - 1);
     this.max = Math.min(s.max | 0, steps.length - 1);
+    this.done = new Set(s.done || []);     // steps finished
+    this.later = new Set(s.later || []);   // steps the learner chose to come back to: no penalty, just a bookmark
     mount.addEventListener("click", e => this._click(e));
   }
+
+  _save() { store.set(this.key, { i: this.i, max: this.max, done: [...this.done], later: [...this.later] }); }
+
+  /** Start over from the first step with a clean slate. */
+  restart() { this.done.clear(); this.later.clear(); this.max = 0; this.start(0); }
 
   get step() { return this.steps[this.i]; }
   get stage() { return this.step.stage; }
@@ -57,7 +66,7 @@ export class Mission {
   start(i, { focus = true } = {}) {
     this.i = Math.max(0, Math.min(this.steps.length - 1, i));
     this.max = Math.max(this.max, this.i);
-    store.set(this.key, { i: this.i, max: this.max });
+    this._save();
     const st = this.step;
     this.ctx = { attempts: 0 };
     this.msg = ""; this.askFb = ""; this.pred = null; this.wrong = new Set(); this.noted = false;
@@ -96,10 +105,12 @@ export class Mission {
     const note = st.note?.(this.ctx, this.lab);
     if (note) this.notebook.add(note, { tag: st.id });
     this.noted = !!note;
+    this.done.add(st.id);
+    this.later.delete(st.id);
     (st.unlock || []).forEach(k => this.lab.addUnlock(k));
     st.onDone?.(this.lab, this.ctx);
     this.max = Math.max(this.max, Math.min(this.i + 1, this.steps.length - 1));
-    store.set(this.key, { i: this.i, max: this.max });
+    this._save();
     if (render) this.render();
   }
 
@@ -117,7 +128,8 @@ export class Mission {
     else if (a === "act") this.event({ type: b.dataset.id });
     else if (a === "next") this.start(this.i + 1);
     else if (a === "back") this.start(this.i - 1);
-    else if (a === "skip") this.start(this.i + 1);
+    else if (a === "later") { this.later.add(st.id); this.start(this.i + 1); }
+    else if (a === "goto") this.start(+b.dataset.k);
     else if (a === "stage") this.start(+b.dataset.k);
     else if (a === "custom") this.onCustom?.(b.dataset.id);
   }
@@ -141,10 +153,19 @@ export class Mission {
     }).join("")}</nav>`;
     if (this.view.loop) h += `<ol class="m-loop" aria-label="Learning loop, current phase: ${cur}">${LOOP.map(p => `<li class="${p === cur ? "on" : ""}">${p}</li>`).join("")}</ol>`;
     h += this.view.progress === "dots"
-      ? `<p class="m-dots" aria-label="Step ${this.i + 1} of ${n}">${this.steps.map((_, k) => `<span class="${k < this.i ? "past" : k === this.i ? "on" : ""}"></span>`).join("")}</p>`
+      ? `<p class="m-dots" aria-label="Step ${this.i + 1} of ${n}">${this.steps.map((s, k) => {
+        const saved = this.later.has(s.id) && !this.done.has(s.id);
+        const cls = k === this.i ? "on" : saved ? "later" : this.done.has(s.id) ? "past" : "";
+        return k <= this.max && k !== this.i
+          ? `<button type="button" class="${cls}" data-m="goto" data-k="${k}" aria-label="Go to step ${k + 1}: ${s.title}${saved ? " (saved for later)" : ""}"></button>`
+          : `<span class="${cls}"></span>`;
+      }).join("")}</p>`
       : `<p class="m-count">Step ${this.i + 1} of ${n}</p>`;
     h += `<h2 tabindex="-1">${st.title}</h2>
     <div class="m-prompt">${v(st.prompt)}</div>`;
+    const saved = this.steps.map((s, k) => [s, k]).filter(([s]) => this.later.has(s.id) && !this.done.has(s.id));
+    if (this.i === n - 1 && saved.length)
+      h += `<div class="m-later"><p class="m-later-t">${T.laterTitle}</p><p class="m-small">${T.laterIntro}</p>${saved.map(([s, k]) => `<button type="button" class="btn" data-m="goto" data-k="${k}">${s.title}</button>`).join("")}</div>`;
 
     if (st.predict) {
       const pr = st.predict, lab = pr.options.find(o => o.id === this.pred)?.label;
@@ -184,7 +205,7 @@ export class Mission {
     }
 
     h += `<div class="m-nav"><button type="button" class="btn ghost" data-m="back" ${this.i ? "" : "disabled"}>← Back</button>
-      ${ph !== "done" ? `<button type="button" class="btn ghost" data-m="skip" ${this.i < n - 1 ? "" : "disabled"}>Skip</button>` : ""}
+      ${ph !== "done" && this.i < n - 1 ? `<button type="button" class="btn ghost" data-m="later">${T.later}</button>` : ""}
       ${ph === "done" && this.i < n - 1 ? `<button type="button" class="btn primary" data-m="next">${T.next}</button>` : ""}</div>`;
     this.mount.innerHTML = h;
   }
